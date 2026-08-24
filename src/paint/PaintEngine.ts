@@ -262,6 +262,22 @@ export class PaintEngine {
     return count;
   }
 
+  /**
+   * レイヤー画像のメモリを解放する。
+   * 1インスタンスで 1024x1024 のキャンバスを5枚（約20MB）持つので、
+   * 解析が済んで以降使わないもの（敵キャラなど）は明示的に捨てる。
+   * 解放後は描画・解析に使えない。
+   */
+  release(): void {
+    for (const part of STEP_ORDER) {
+      this.layers[part].width = 0;
+      this.layers[part].height = 0;
+    }
+    this.composite.width = 0;
+    this.composite.height = 0;
+    this.counts.clear();
+  }
+
   // ---------------------------------------------------------------- 内部
 
   private invalidate(part: PartId): void {

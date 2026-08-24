@@ -10,7 +10,6 @@ import type { CharacterAnalysis } from './partAnalyzer';
 import { analyzeCharacter } from './partAnalyzer';
 
 export interface EnemyAssets {
-  engine: PaintEngine;
   analysis: CharacterAnalysis;
   thumbnail: HTMLCanvasElement;
 }
@@ -66,7 +65,13 @@ export function getEnemyAssets(id: string): EnemyAssets {
   const enemy = enemyById(id);
   const engine = PaintEngine.fromDoc(structuredClone(enemy.doc));
   const analysis = analyzeCharacter(engine);
-  const assets: EnemyAssets = { engine, analysis, thumbnail: makeThumbnail(engine, analysis) };
+  const assets: EnemyAssets = { analysis, thumbnail: makeThumbnail(engine, analysis) };
+
+  // 解析結果とサムネイルは切り抜き済みの小さなキャンバスなので、
+  // ここで元の 1024x1024 レイヤー（約20MB）を手放す。
+  // 6体ぶんを抱えたままだとモバイルでメモリを使い切ってしまう。
+  engine.release();
+
   cache.set(id, assets);
   return assets;
 }

@@ -1,0 +1,943 @@
+/* ============================================================
+   らくがきバトル - グローバルスタイル
+   3歳児が指で操作する前提: 大きなタップ領域・強いコントラスト・ひらがな
+   ============================================================ */
+
+:root {
+  --sky-1: #8fd3f4;
+  --sky-2: #b7e4c7;
+  --cream: #fffdf5;
+  --ink: #3b3226;
+  --ink-soft: #7a6a55;
+  --line: #e4d9c3;
+  --orange: #ff9f43;
+  --orange-dark: #e07f22;
+  --green: #43c26b;
+  --green-dark: #2f9c51;
+  --blue: #4aa8e0;
+  --blue-dark: #2f83b8;
+  --red: #ff6b6b;
+  --red-dark: #d94c4c;
+  --purple: #a37bd8;
+  --yellow: #ffd93d;
+  --shadow: 0 4px 0 rgba(0, 0, 0, 0.18);
+  --radius: 18px;
+  --tap: 56px;
+  --font: "Hiragino Maru Gothic ProN", "ヒラギノ丸ゴ ProN", "M PLUS Rounded 1c",
+    "Rounded Mplus 1c", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  font-family: var(--font);
+  color: var(--ink);
+  background: linear-gradient(170deg, var(--sky-1) 0%, var(--sky-2) 100%);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#app {
+  position: relative;
+  width: 100%;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+#scene-root {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- 共通シーン ---------- */
+
+.scene {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: max(10px, env(safe-area-inset-top)) 12px
+    max(10px, env(safe-area-inset-bottom)) 12px;
+  gap: 10px;
+  animation: scene-in 0.28s ease-out both;
+}
+
+@keyframes scene-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.scene-center {
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---------- ボタン ---------- */
+
+.btn {
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 20px;
+  color: #fff;
+  background: var(--blue);
+  border: none;
+  border-radius: var(--radius);
+  min-height: var(--tap);
+  min-width: var(--tap);
+  padding: 12px 22px;
+  cursor: pointer;
+  box-shadow: 0 5px 0 var(--blue-dark);
+  transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.15s ease;
+  touch-action: manipulation;
+  line-height: 1.25;
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(4px);
+  box-shadow: 0 1px 0 var(--blue-dark);
+}
+
+.btn:disabled {
+  filter: grayscale(0.85);
+  opacity: 0.55;
+  cursor: default;
+  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.2);
+}
+
+.btn-primary {
+  background: var(--orange);
+  box-shadow: 0 5px 0 var(--orange-dark);
+}
+.btn-primary:active:not(:disabled) {
+  box-shadow: 0 1px 0 var(--orange-dark);
+}
+
+.btn-go {
+  background: var(--green);
+  box-shadow: 0 5px 0 var(--green-dark);
+}
+.btn-go:active:not(:disabled) {
+  box-shadow: 0 1px 0 var(--green-dark);
+}
+
+.btn-danger {
+  background: var(--red);
+  box-shadow: 0 5px 0 var(--red-dark);
+}
+.btn-danger:active:not(:disabled) {
+  box-shadow: 0 1px 0 var(--red-dark);
+}
+
+.btn-ghost {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 4px 0 var(--line);
+}
+.btn-ghost:active:not(:disabled) {
+  box-shadow: 0 1px 0 var(--line);
+}
+
+.btn-huge {
+  font-size: 28px;
+  padding: 18px 34px;
+  min-height: 74px;
+  border-radius: 24px;
+}
+
+.btn-small {
+  font-size: 16px;
+  padding: 8px 14px;
+  min-height: 48px;
+}
+
+/* ---------- ミュートボタン ---------- */
+
+#mute-btn {
+  position: fixed;
+  top: max(8px, env(safe-area-inset-top));
+  right: max(8px, env(safe-area-inset-right));
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 60;
+  box-shadow: var(--shadow);
+  touch-action: manipulation;
+}
+
+/* ---------- メインメニュー ---------- */
+
+.menu-logo {
+  font-size: clamp(38px, 11vw, 74px);
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 4px 0 var(--orange), 0 8px 14px rgba(0, 0, 0, 0.2);
+  margin: 0 0 6px;
+  letter-spacing: 2px;
+  animation: logo-wobble 2.6s ease-in-out infinite;
+}
+
+@keyframes logo-wobble {
+  0%,
+  100% {
+    transform: rotate(-2deg) translateY(0);
+  }
+  50% {
+    transform: rotate(2deg) translateY(-8px);
+  }
+}
+
+.menu-sub {
+  font-size: clamp(14px, 4vw, 20px);
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.75);
+  padding: 8px 18px;
+  border-radius: 999px;
+  margin-bottom: 28px;
+  text-align: center;
+}
+
+.menu-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: min(420px, 88vw);
+}
+
+.menu-buttons .btn {
+  width: 100%;
+}
+
+.menu-hint {
+  margin-top: 20px;
+  font-size: 14px;
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+/* ---------- オエカキ画面 ---------- */
+
+.draw-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.step-dots {
+  display: flex;
+  gap: 8px;
+}
+
+.step-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.6);
+  border: 3px solid #fff;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.step-dot.done {
+  background: var(--green);
+}
+
+.step-dot.current {
+  background: var(--orange);
+  transform: scale(1.35);
+}
+
+.draw-title {
+  font-size: clamp(18px, 5vw, 26px);
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.15);
+  margin: 0;
+}
+
+/* ヘッダー内（横並び）のときだけ横方向に伸ばす。
+   縦並びのシーンで flex:1 が効くと、見出しが縦に伸びて画面が空いてしまう */
+.draw-header .draw-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.draw-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+/* 正方形の描画面はキャンバス側で中央にレターボックス表示する。
+   CSSの aspect-ratio に頼ると縦長画面で高さが伸びて絵が歪むため。 */
+.canvas-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+.paint-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.toolbar {
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: var(--radius);
+  padding: 8px;
+}
+
+.tool-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* せまい画面では6列×2段。12色を1列に並べると指で押せない大きさになる */
+.palette {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+@media (min-width: 620px) {
+  .palette {
+    grid-template-columns: repeat(12, 1fr);
+  }
+}
+
+.swatch {
+  aspect-ratio: 1 / 1;
+  min-height: 34px;
+  border-radius: 10px;
+  border: 3px solid rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  padding: 0;
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.18);
+  touch-action: manipulation;
+}
+
+.swatch.selected {
+  border-color: var(--ink);
+  transform: scale(1.16);
+}
+
+.tool-btn {
+  border: none;
+  background: #fff;
+  border-radius: 14px;
+  min-width: 54px;
+  min-height: 50px;
+  font-size: 22px;
+  font-family: inherit;
+  font-weight: 800;
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: 0 3px 0 var(--line);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 4px 8px;
+  touch-action: manipulation;
+}
+
+.tool-btn small {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.tool-btn.selected {
+  background: var(--yellow);
+  box-shadow: 0 3px 0 #d9ad00;
+}
+
+.tool-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.width-dot {
+  border-radius: 50%;
+  background: var(--ink);
+  display: block;
+}
+
+.draw-footer {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+/* 横長画面ではキャンバスを左、ツールを右に */
+@media (orientation: landscape) and (min-width: 720px) {
+  .draw-body {
+    flex-direction: row;
+    align-items: stretch;
+  }
+  .toolbar {
+    width: 300px;
+    flex: 0 0 300px;
+    justify-content: center;
+  }
+  .palette {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+/* ---------- 3Dステージ ---------- */
+
+.stage3d {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: linear-gradient(180deg, #bfe9ff 0%, #e8f7d4 72%, #cdeaa5 100%);
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.08);
+}
+
+.stage3d canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+.stage-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  transform: translateX(-50%);
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(59, 50, 38, 0.65);
+  background: rgba(255, 255, 255, 0.7);
+  padding: 3px 12px;
+  border-radius: 999px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ---------- プレビュー画面 ---------- */
+
+.preview-layout {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stat-panel {
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: clamp(14px, 3.6vw, 18px);
+  font-weight: 800;
+}
+
+.stat-label {
+  flex: 0 0 auto;
+  min-width: 7.2em;
+  white-space: nowrap;
+}
+
+.stars {
+  letter-spacing: 1px;
+  font-size: clamp(15px, 4vw, 20px);
+  color: var(--orange);
+}
+
+.stat-value {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+  font-size: 0.9em;
+}
+
+.element-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border-radius: 14px;
+  padding: 8px 12px;
+  font-weight: 900;
+  font-size: clamp(15px, 4vw, 20px);
+  border: 3px solid var(--line);
+}
+
+.element-badge .emoji {
+  font-size: 30px;
+}
+
+.hint-line {
+  text-align: center;
+  font-size: clamp(12px, 3.4vw, 15px);
+  color: var(--ink);
+  background: var(--yellow);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-weight: 700;
+}
+
+.action-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.action-row .btn {
+  flex: 1 1 0;
+  min-width: 84px;
+  font-size: clamp(14px, 3.6vw, 18px);
+  padding: 10px 8px;
+}
+
+@media (orientation: landscape) and (min-width: 780px) {
+  .preview-layout {
+    flex-direction: row;
+  }
+  .preview-side {
+    width: 320px;
+    flex: 0 0 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+  }
+}
+
+/* ---------- ルーレット画面 ---------- */
+
+.wheel-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 矢印は盤面と同じ箱の中に置く。盤面サイズを変えても位置がずれない */
+.wheel-box {
+  position: relative;
+  width: min(86vw, 52vh, 520px);
+  aspect-ratio: 1 / 1;
+}
+
+.wheel-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.wheel-pointer {
+  position: absolute;
+  top: -26px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 42px;
+  line-height: 1;
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.3));
+  z-index: 5;
+  pointer-events: none;
+}
+
+.streak-banner {
+  text-align: center;
+  font-size: clamp(16px, 4.5vw, 22px);
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 3px 0 var(--orange);
+}
+
+.enemy-card {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: var(--radius);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  animation: pop-in 0.35s cubic-bezier(0.2, 1.4, 0.5, 1) both;
+}
+
+@keyframes pop-in {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.enemy-card .enemy-name {
+  font-size: clamp(20px, 5.5vw, 30px);
+  font-weight: 900;
+}
+
+.enemy-card img {
+  width: 76px;
+  height: 76px;
+  object-fit: contain;
+}
+
+.enemy-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+
+/* ---------- 戦闘画面 ---------- */
+
+.battle-top {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.fighter-box {
+  flex: 1;
+  min-width: 0;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 14px;
+  padding: 6px 10px;
+}
+
+.fighter-name {
+  font-size: clamp(13px, 3.6vw, 17px);
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hp-bar {
+  position: relative;
+  height: 16px;
+  background: #e6e0d4;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.hp-fill {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  transform-origin: left center;
+  background: var(--green);
+  border-radius: 999px;
+  transition: transform 0.45s ease, background 0.45s ease;
+}
+
+.hp-num {
+  font-size: 12px;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  margin-top: 2px;
+}
+
+.msg-band {
+  min-height: 62px;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: var(--radius);
+  border: 4px solid #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 8px 14px;
+  font-size: clamp(16px, 4.4vw, 24px);
+  font-weight: 900;
+}
+
+.dmg-pop {
+  position: absolute;
+  font-size: clamp(30px, 8vw, 52px);
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 0 6px #000, 0 3px 0 var(--red-dark);
+  pointer-events: none;
+  animation: dmg-float 0.95s ease-out forwards;
+  z-index: 10;
+}
+
+@keyframes dmg-float {
+  0% {
+    transform: translate(-50%, 0) scale(0.4);
+    opacity: 0;
+  }
+  25% {
+    transform: translate(-50%, -18px) scale(1.25);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -80px) scale(1);
+    opacity: 0;
+  }
+}
+
+.effect-tag {
+  position: absolute;
+  left: 50%;
+  top: 16%;
+  transform: translateX(-50%);
+  font-size: clamp(18px, 5vw, 28px);
+  font-weight: 900;
+  color: #fff;
+  background: var(--red);
+  padding: 6px 18px;
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+  animation: pop-in 0.3s cubic-bezier(0.2, 1.4, 0.5, 1) both;
+  z-index: 10;
+  white-space: nowrap;
+}
+
+.effect-tag.weak {
+  background: var(--blue);
+}
+
+/* 光りかたで目立たせる。大きさは変えない
+   ―― 3歳児が指で狙うボタンなので、当たり判定が動かないようにする */
+.special-btn {
+  position: absolute;
+  left: 50%;
+  bottom: 8%;
+  transform: translateX(-50%);
+  z-index: 20;
+  background: linear-gradient(180deg, #ff5f6d, #ffc371);
+  animation: special-pulse 0.7s ease-in-out infinite alternate;
+  white-space: nowrap;
+  pointer-events: auto;
+}
+
+@keyframes special-pulse {
+  from {
+    box-shadow: 0 6px 0 #c0392b, 0 0 14px rgba(255, 120, 60, 0.55);
+    filter: brightness(1);
+  }
+  to {
+    box-shadow: 0 6px 0 #c0392b, 0 0 54px rgba(255, 190, 80, 1);
+    filter: brightness(1.14);
+  }
+}
+
+.flash-white {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 15;
+}
+
+.flash-white.on {
+  animation: flash 0.5s ease-out;
+}
+
+@keyframes flash {
+  0% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ---------- リザルト画面 ---------- */
+
+.result-title {
+  font-size: clamp(30px, 9vw, 62px);
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 4px 0 var(--orange), 0 8px 14px rgba(0, 0, 0, 0.22);
+  text-align: center;
+  margin: 0;
+  animation: pop-in 0.45s cubic-bezier(0.2, 1.4, 0.5, 1) both;
+}
+
+.result-title.lose {
+  text-shadow: 0 4px 0 var(--blue-dark), 0 8px 14px rgba(0, 0, 0, 0.22);
+}
+
+.result-sub {
+  text-align: center;
+  font-size: clamp(15px, 4vw, 20px);
+  font-weight: 800;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 999px;
+  padding: 8px 18px;
+  margin: 0 auto;
+}
+
+.up-value {
+  color: var(--green-dark);
+  font-weight: 900;
+}
+
+.trophy {
+  font-size: clamp(58px, 18vw, 120px);
+  text-align: center;
+  animation: logo-wobble 2s ease-in-out infinite;
+}
+
+.confetti {
+  position: absolute;
+  top: -20px;
+  width: 12px;
+  height: 18px;
+  opacity: 0.95;
+  animation: fall linear forwards;
+  pointer-events: none;
+  z-index: 30;
+}
+
+@keyframes fall {
+  to {
+    transform: translateY(105vh) rotate(760deg);
+  }
+}
+
+/* ---------- ダイアログ ---------- */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(30, 24, 16, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+  animation: scene-in 0.18s ease-out both;
+}
+
+.dialog {
+  background: var(--cream);
+  border-radius: 24px;
+  padding: 24px 22px;
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+}
+
+.dialog p {
+  font-size: clamp(17px, 4.6vw, 22px);
+  font-weight: 800;
+  margin: 0 0 20px;
+  line-height: 1.5;
+}
+
+.dialog-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.dialog-buttons .btn {
+  flex: 1 1 40%;
+}
+
+/* ---------- ユーティリティ ---------- */
+
+.row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.row-center {
+  justify-content: center;
+}
+
+.grow {
+  flex: 1;
+  min-height: 0;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.spinner-note {
+  text-align: center;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.2);
+}

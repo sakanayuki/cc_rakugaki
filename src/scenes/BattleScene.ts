@@ -1,17 +1,18 @@
 /**
  * 戦闘画面。
  * battleEngine が生成したイベント列を、順番に3Dの演出として再生していく。
- * プレイヤーの操作は「3往復して決着がつかなかったときの必殺技ボタン」だけ。
+ * プレイヤーの操作は「決着がつかなかったときの必殺技ボタン」だけ。
  */
 
 import * as THREE from 'three';
 import { audio, hitSfxFor } from '../app/audio';
 import { gameState } from '../app/GameState';
+import type { WinKind } from '../app/GameState';
 import type { Scene, SceneContext, SceneParamMap } from '../app/SceneManager';
 import { getStage } from '../app/Stage3D';
 import type { BattleEvent, Side } from '../game/battleEngine';
-import { Battle } from '../game/battleEngine';
-import { enemyById } from '../game/enemies';
+import { Battle, MAX_ROUNDS, specialUnlockRound } from '../game/battleEngine';
+import { enemyById, enemyStatsFor } from '../game/enemies';
 import { systemRng } from '../game/rng';
 import type { Stats } from '../game/stats';
 import { attackActionFor } from '../rig/animations';
@@ -23,6 +24,8 @@ import { ELEMENT_INFO, S, attackMessage, streakLabel } from '../ui/strings';
 
 const PLAYER_X = -2;
 const ENEMY_X = 2;
+/** 会心のカットインを見せる時間 */
+const CUTIN_MS = 700;
 
 interface FighterView {
   root: HTMLElement;
@@ -46,31 +49,43 @@ export function createBattleScene(ctx: SceneContext, params: SceneParamMap['batt
   const stage = getStage();
   const stageHost = h('div', { class: 'stage3d' });
   const overlay = h('div', { class: 'grow' });
+  /** 効果タグを縦に積むための入れもの。重ならないようにする */
+  const tagStack = h('div', { class: 'tag-stack' });
   const flash = h('div', { class: 'flash-white' });
   const message = h('div', { class: 'msg-band', text: S.battleStart });
 
   const enemy = enemyById(params.enemyId);
+  const playerBase = gameState.baseStats;
   const playerStats = gameState.effectiveStats();
+  const enemyStats = enemyStatsFor(enemy, playerBase ?? playerStats, gameState.enemyScale);
+
   const playerView = fighterBox('きみ', playerStats);
-  const enemyView = fighterBox(enemy.name, enemy.stats);
+  const enemyView = fighterBox(enemy.name, enemyStats);
+
+  const unlockRound = specialUnlockRound(
+    playerStats.element,
+    enemyStats.element,
+    gameState.isFinalBattle,
+  );
 
   const battle = new Battle(
     { name: 'きみ', stats: playerStats },
-    { name: enemy.name, stats: enemy.stats },
-    systemRng,
+    { name: enemy.name, stats: enemyStats },
+    { rng: systemRng, specialUnlockRound: unlockRound },
   );
 
   let playerRig: CharacterRig | null = null;
   let enemyRig: CharacterRig | null = null;
   let disposed = false;
   let specialResolve: (() => void) | null = null;
+  let winKind: WinKind = 'ko';
 
   function rigOf(side: Side): CharacterRig | null {
     return side === 'player' ? playerRig : enemyRig;
   }
 
   function statsOf(side: Side): Stats {
-    return side === 'player' ? playerStats : enemy.stats;
+    return side === 'player' ? playerStats : enemyStats;
   }
 
   function viewOf(side: Side): FighterView {
@@ -104,42 +119,67 @@ export function createBattleScene(ctx: SceneContext, params: SceneParamMap['batt
     setTimeout(() => node.remove(), 1200);
   }
 
-  function showDamage(side: Side, damage: number): void {
-    popAt(rigOf(side), h('div', { class: 'dmg-pop', text: `-${damage}` }), 0.6);
+  function showDamage(side: Side, damage: number, critical: boolean): void {
+    const node = h('div', { class: critical ? 'dmg-pop crit' : 'dmg-pop', text: `-${damage}` });
+    popAt(rigOf(side), node, 0.6);
   }
 
-  function showTag(text: string, weak = false): void {
-    const node = h('div', { class: weak ? 'effect-tag weak' : 'effect-tag', text });
-    overlay.append(node);
+  /** 効果タグはスタックに積む（同時に複数出ても重ならない） */
+  function showTag(text: string, variant: 'strong' | 'weak' | 'crit' = 'strong'): void {
+    const node = h('div', { class: `effect-tag ${variant}`, text });
+    tagStack.append(node);
     setTimeout(() => node.remove(), 1100);
   }
 
-  function whiteFlash(): void {
-    flash.classList.remove('on');
+  function whiteFlash(soft = false): void {
+    flash.classList.remove('on', 'soft');
     void flash.offsetWidth;
+    flash.classList.toggle('soft', soft);
     flash.classList.add('on');
   }
 
+  /** 会心の一撃のカットイン */
+  async function showCutin(): Promise<void> {
+    const node = h('div', { class: 'cutin' }, [h('span', { text: S.critical })]);
+    overlay.append(node);
+    audio.play('critical');
+    whiteFlash(true);
+    await wait(CUTIN_MS);
+    node.remove();
+  }
+
   /** 攻撃が当たった瞬間の処理（ダメージ表示・被弾モーション・HP更新） */
-  function resolveImpact(event: Extract<BattleEvent, { type: 'attack' }>): void {
+  async function resolveImpact(event: Extract<BattleEvent, { type: 'attack' }>): Promise<void> {
     const defender = rigOf(event.target);
+
     if (event.result === 'dodge') {
       void defender?.play('dodge');
       audio.play('dodge');
-      showTag(S.dodged, true);
+      showTag(S.dodged, 'weak');
       return;
     }
+
+    // 会心はカットインを見せてからダメージを出す
+    if (event.critical) {
+      message.textContent = S.critical;
+      await showCutin();
+      if (disposed) return;
+      showTag(S.critical, 'crit');
+    }
+
     if (event.result === 'guard') {
       void defender?.play('guard');
       audio.play('guard');
-      showTag(S.guarded, true);
+      showTag(S.guarded, 'weak');
     } else {
       void defender?.play('hit');
-      audio.play(hitSfxFor(statsOf(event.actor).element));
+      if (!event.critical) audio.play(hitSfxFor(statsOf(event.actor).element));
     }
-    if (event.elementMul === 2) showTag(S.superEffective);
-    else if (event.elementMul === 0.5) showTag(S.notEffective, true);
-    showDamage(event.target, event.damage);
+
+    if (event.elementMul === 2) showTag(S.superEffective, 'strong');
+    else if (event.elementMul === 0.5) showTag(S.notEffective, 'weak');
+
+    showDamage(event.target, event.damage, event.critical);
     updateHp(event.target, event.hpAfter);
   }
 
@@ -151,10 +191,11 @@ export function createBattleScene(ctx: SceneContext, params: SceneParamMap['batt
 
     const element = statsOf(event.actor).element;
     let resolved = false;
+    let impact: Promise<void> = Promise.resolve();
     const impactOnce = () => {
       if (resolved || disposed) return;
       resolved = true;
-      resolveImpact(event);
+      impact = resolveImpact(event);
     };
 
     actor.onEvent((name, self) => {
@@ -170,11 +211,14 @@ export function createBattleScene(ctx: SceneContext, params: SceneParamMap['batt
     await actor.play(attackActionFor(element));
     impactOnce();
     actor.onEvent(null);
+    await impact;
+    if (disposed) return;
     await wait(650);
   }
 
   async function playSpecial(): Promise<void> {
     const actor = playerRig;
+    winKind = 'special';
     message.textContent = S.specialGo;
     audio.play('special');
     if (!actor) return;
@@ -210,6 +254,11 @@ export function createBattleScene(ctx: SceneContext, params: SceneParamMap['batt
         case 'start':
           message.textContent = S.battleStart;
           await wait(900);
+          if (event.specialUnlockRound < MAX_ROUNDS) {
+            // 不利属性の救済。なぜ早く使えるのかを必ず伝える
+            message.textContent = S.earlySpecial;
+            await wait(1600);
+          }
           break;
         case 'attack':
           await playAttack(event);
@@ -242,6 +291,7 @@ export function createBattleScene(ctx: SceneContext, params: SceneParamMap['batt
     ctx.go('result', {
       outcome: winner === 'player' ? 'win' : 'lose',
       enemyId: enemy.id,
+      winKind,
     });
   }
 
@@ -249,9 +299,9 @@ export function createBattleScene(ctx: SceneContext, params: SceneParamMap['batt
     mount(root) {
       root.append(
         h('div', { class: 'scene' }, [
-          h('div', { class: 'streak-banner', text: streakLabel(gameState.winStreak + 1) }),
+          h('div', { class: 'streak-banner', text: streakLabel(gameState.battleNumber) }),
           h('div', { class: 'battle-top' }, [playerView.root, enemyView.root]),
-          h('div', { class: 'stage3d grow' }, [stageHost, overlay, flash]),
+          h('div', { class: 'stage3d grow' }, [stageHost, overlay, tagStack, flash]),
           message,
         ]),
       );
@@ -285,12 +335,11 @@ export function createBattleScene(ctx: SceneContext, params: SceneParamMap['batt
 
       // 2体ぶんの幅と、踏み込み・ジャンプの動きぶんの余裕をとる
       const height = Math.max(playerRig?.height ?? 0, enemyRigBuilt.height);
-      const halfWidth =
-        ENEMY_X + Math.max(playerRig?.halfWidth ?? 0, enemyRigBuilt.halfWidth);
+      const halfWidth = ENEMY_X + Math.max(playerRig?.halfWidth ?? 0, enemyRigBuilt.halfWidth);
       stage.frame({ halfWidth, height, margin: height * 0.18 });
 
       updateHp('player', playerStats.maxHp);
-      updateHp('enemy', enemy.stats.maxHp);
+      updateHp('enemy', enemyStats.maxHp);
 
       void playEvents(battle.run());
     },

@@ -25,6 +25,16 @@ export interface FillMaskResult {
   seedOpaque: boolean;
 }
 
+export interface FillOptions {
+  /** 同じ色とみなす許容差 */
+  tolerance?: number;
+  /**
+   * 塗ってはいけないピクセル（1=侵入禁止）。前工程で描いたパーツを渡す。
+   * 「かべ」としては効くが「塗れる面」ではない、という扱いになる。
+   */
+  blocked?: Uint8Array | null;
+}
+
 /**
  * 塗りつぶし範囲を求める。
  * 種が透明なら「透明領域を線で囲まれた範囲まで」、
@@ -36,11 +46,16 @@ export function computeFillMask(
   height: number,
   seedX: number,
   seedY: number,
-  tolerance: number = COLOR_TOLERANCE,
+  options: FillOptions = {},
 ): FillMaskResult | null {
+  const tolerance = options.tolerance ?? COLOR_TOLERANCE;
+  const blocked = options.blocked ?? null;
   const sx = Math.floor(seedX);
   const sy = Math.floor(seedY);
   if (sx < 0 || sy < 0 || sx >= width || sy >= height) return null;
+
+  // 種が前工程のパーツの上なら、そこは塗れない
+  if (blocked && blocked[sy * width + sx]) return null;
 
   const seedIndex = (sy * width + sx) * 4;
   const seedOpaque = data[seedIndex + 3] >= ALPHA_THRESHOLD;
@@ -49,6 +64,7 @@ export function computeFillMask(
   const seedB = data[seedIndex + 2];
 
   const matches = (pixel: number): boolean => {
+    if (blocked && blocked[pixel]) return false;
     const i = pixel * 4;
     const alpha = data[i + 3];
     if (!seedOpaque) return alpha < ALPHA_THRESHOLD;
@@ -116,6 +132,7 @@ export function dilateFringe(
   data: Uint8ClampedArray,
   width: number,
   height: number,
+  blocked: Uint8Array | null = null,
 ): number {
   const added: number[] = [];
   for (let y = 0; y < height; y++) {
@@ -130,6 +147,7 @@ export function dilateFringe(
       ];
       for (const n of neighbours) {
         if (n < 0 || mask[n]) continue;
+        if (blocked && blocked[n]) continue;
         if (data[n * 4 + 3] < FRINGE_ALPHA) added.push(n);
       }
     }

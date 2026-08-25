@@ -479,12 +479,14 @@ body {
 }
 
 .stat-panel {
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.9);
   border-radius: var(--radius);
   padding: 10px 12px;
   display: flex;
   flex-direction: column;
   gap: 6px;
+  /* 影も枠も付けない = 押せないもの、という約束 */
+  box-shadow: none;
 }
 
 .stat-row {
@@ -514,20 +516,13 @@ body {
   font-size: 0.9em;
 }
 
-.element-badge {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: #fff;
-  border-radius: 14px;
-  padding: 8px 12px;
+/* 属性も他のステータスと同じ「情報」として並べる（ボタンに見せない） */
+.stat-element {
+  margin-left: auto;
   font-weight: 900;
-  font-size: clamp(15px, 4vw, 20px);
-  border: 3px solid var(--line);
-}
-
-.element-badge .emoji {
-  font-size: 30px;
+  font-size: clamp(14px, 3.6vw, 18px);
+  color: var(--ink);
+  white-space: nowrap;
 }
 
 .hint-line {
@@ -808,9 +803,23 @@ body {
   animation: flash 0.5s ease-out;
 }
 
+/* 会心は10%で頻繁に出るので、必殺技より控えめに光らせる */
+.flash-white.on.soft {
+  animation: flash-soft 0.4s ease-out;
+}
+
 @keyframes flash {
   0% {
     opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes flash-soft {
+  0% {
+    opacity: 0.45;
   }
   100% {
     opacity: 0;
@@ -940,4 +949,235 @@ body {
   font-weight: 800;
   color: #fff;
   text-shadow: 0 2px 0 rgba(0, 0, 0, 0.2);
+}
+
+
+/* ============================================================
+   第2版で追加したもの
+   ============================================================ */
+
+/* ---------- メニューの絵プレビュー ---------- */
+
+.continue-row {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+}
+
+.continue-row .btn {
+  flex: 1;
+  min-width: 0;
+}
+
+.save-thumb {
+  flex: 0 0 auto;
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  background: var(--cream);
+  border: 3px solid #fff;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.save-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* ---------- オエカキの警告表示 ---------- */
+
+.hint-line.hint-warn {
+  background: var(--red);
+  color: #fff;
+}
+
+/* ---------- プレビュー: 3Dステージと操作パネルの連結 ---------- */
+
+.stage-group {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 下辺の角丸を落として操作パネルとひとかたまりに見せる */
+.stage3d-attached {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.action-panel {
+  flex: 0 0 auto;
+  background: rgba(255, 255, 255, 0.82);
+  border-bottom-left-radius: var(--radius);
+  border-bottom-right-radius: var(--radius);
+  padding: 6px 8px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.action-panel-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+/* 4つとも同じ色。色分けをやめて「同じ種類の操作」だと分かるようにする */
+.action-btn {
+  background: var(--blue);
+  box-shadow: 0 4px 0 var(--blue-dark);
+}
+
+/* せまい画面では2×2に揃える（3+1の半端な折返しを避ける） */
+@media (max-width: 620px) {
+  .action-panel .action-row .btn {
+    flex: 1 1 42%;
+  }
+
+  .draw-footer .btn {
+    font-size: clamp(14px, 3.8vw, 18px);
+    padding: 12px 14px;
+  }
+}
+
+.action-btn:active:not(:disabled) {
+  box-shadow: 0 1px 0 var(--blue-dark);
+}
+
+/* ---------- ルーレット: 強敵と相性警告 ---------- */
+
+.enemy-card.strong {
+  border: 4px solid var(--yellow);
+}
+
+.strong-tag {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 900;
+  color: #7a5a00;
+  background: var(--yellow);
+  border-radius: 999px;
+  padding: 2px 10px;
+  vertical-align: middle;
+}
+
+.warn-banner {
+  background: var(--red);
+  color: #fff;
+  border-radius: var(--radius);
+  padding: 8px 14px;
+  margin-bottom: 8px;
+  text-align: center;
+  font-weight: 900;
+  font-size: clamp(15px, 4vw, 19px);
+  box-shadow: var(--shadow);
+  animation: warn-pulse 0.9s ease-in-out infinite alternate;
+}
+
+.warn-banner small {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 2px;
+  opacity: 0.95;
+}
+
+@keyframes warn-pulse {
+  from {
+    filter: brightness(1);
+  }
+  to {
+    filter: brightness(1.18);
+  }
+}
+
+/* ---------- 戦闘: タグの積み上げ ---------- */
+
+/* 「ばつぐん」「ガード」「会心」が同時に出ても重ならないよう縦に積む */
+.tag-stack {
+  position: absolute;
+  top: 10%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+  z-index: 12;
+}
+
+.tag-stack .effect-tag {
+  position: static;
+  transform: none;
+  left: auto;
+  top: auto;
+}
+
+.effect-tag.crit {
+  background: #ffb020;
+  color: #3b2500;
+}
+
+/* ---------- 戦闘: 会心の一撃 ---------- */
+
+.dmg-pop.crit {
+  color: #fff3b0;
+  font-size: clamp(38px, 10vw, 68px);
+  text-shadow: 0 0 8px #b34700, 0 4px 0 #7a2f00;
+}
+
+.cutin {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 38%;
+  height: 84px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(100deg, #ff5f6d 0%, #ffb020 50%, #ff5f6d 100%);
+  box-shadow: 0 0 40px rgba(255, 140, 0, 0.9);
+  transform: skewY(-4deg);
+  z-index: 25;
+  pointer-events: none;
+  animation: cutin-sweep 0.7s ease-out both;
+}
+
+.cutin span {
+  font-size: clamp(20px, 6vw, 36px);
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 3px 0 #b34700;
+  white-space: nowrap;
+  transform: skewY(4deg);
+}
+
+@keyframes cutin-sweep {
+  0% {
+    opacity: 0;
+    transform: skewY(-4deg) translateX(-100%);
+  }
+  20% {
+    opacity: 1;
+    transform: skewY(-4deg) translateX(0);
+  }
+  75% {
+    opacity: 1;
+    transform: skewY(-4deg) translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: skewY(-4deg) translateX(100%);
+  }
 }

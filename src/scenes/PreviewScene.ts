@@ -2,9 +2,13 @@
  * 動作プレビュー画面。
  * 描いた絵から自動でリグを組み、4つのアクションを再生できる。
  * 同時に、絵から決まったパラメータ（たいりょく・こうげき・はやさ・ぞくせい）も確認する。
+ *
+ * 見た目は役割ごとに分ける:
+ *   情報（押せない）  … 平らな白いパネル。影なし
+ *   アクション（押せる）… 3Dステージに連結した1枚の操作パネル。4ボタンとも同じ色
+ *   遷移（押せる）    … 画面下部に独立配置。大きく彩度の高い色
  */
 
-import * as THREE from 'three';
 import { audio, hitSfxFor } from '../app/audio';
 import { gameState } from '../app/GameState';
 import type { Scene, SceneContext } from '../app/SceneManager';
@@ -20,7 +24,7 @@ import { buildCharacter } from '../rig/rigBuilder';
 import { button, h, starString } from '../ui/components';
 import { ELEMENT_INFO, PREVIEW_HINTS, S, elementReason } from '../ui/strings';
 
-/** ステータス1行分の表示を作る */
+/** ステータス1行分の表示を作る（押せない情報であることが分かる平らな見た目） */
 function statRow(label: string, stars: number, value: number): HTMLElement {
   return h('div', { class: 'stat-row' }, [
     h('span', { class: 'stat-label', text: label }),
@@ -31,7 +35,7 @@ function statRow(label: string, stars: number, value: number): HTMLElement {
 
 export function createPreviewScene(ctx: SceneContext): Scene {
   const stage = getStage();
-  const stageHost = h('div', { class: 'stage3d' });
+  const stageHost = h('div', { class: 'stage3d stage3d-attached' });
 
   let rig: CharacterRig | null = null;
   let busy = false;
@@ -71,14 +75,15 @@ export function createPreviewScene(ctx: SceneContext): Scene {
     });
   }
 
+  // 4つとも同じ色にして、「この領域の操作」であることを色ではなく配置で示す
   const actionButtons = [
     button(S.actAttack, {
-      variant: 'danger',
+      class: 'action-btn',
       onClick: () => playAction(attackActionFor(stats.element)),
     }),
-    button(S.actHit, { variant: 'default', onClick: () => playAction('hit') }),
-    button(S.actDodge, { variant: 'go', onClick: () => playAction('dodge') }),
-    button(S.actGuard, { variant: 'primary', onClick: () => playAction('guard') }),
+    button(S.actHit, { class: 'action-btn', onClick: () => playAction('hit') }),
+    button(S.actDodge, { class: 'action-btn', onClick: () => playAction('dodge') }),
+    button(S.actGuard, { class: 'action-btn', onClick: () => playAction('guard') }),
   ];
 
   function setButtonsEnabled(enabled: boolean): void {
@@ -114,20 +119,30 @@ export function createPreviewScene(ctx: SceneContext): Scene {
         h('div', { class: 'scene' }, [
           h('h2', { class: 'draw-title', text: S.previewTitle }),
           h('div', { class: 'preview-layout' }, [
-            stageHost,
+            // 3Dステージと操作パネルを1かたまりに見せる
+            h('div', { class: 'stage-group' }, [
+              stageHost,
+              h('div', { class: 'action-panel' }, [
+                h('div', { class: 'action-panel-title', text: S.actionPanelTitle }),
+                h('div', { class: 'action-row' }, actionButtons),
+              ]),
+            ]),
             h('div', { class: 'preview-side' }, [
               h('div', { class: 'stat-panel' }, [
                 statRow(S.statHp, starsFor(stats.maxHp, 'maxHp'), stats.maxHp),
                 statRow(S.statAtk, starsFor(stats.atk, 'atk'), stats.atk),
                 statRow(S.statSpd, starsFor(stats.spd, 'spd'), stats.spd),
-                h('div', { class: 'element-badge' }, [
-                  h('span', { class: 'emoji', text: info.emoji }),
-                  h('span', { text: `${info.name}（${info.note}）` }),
+                // 属性も他のステータスと同じ行として並べる（バッジ状にしない）
+                h('div', { class: 'stat-row' }, [
+                  h('span', { class: 'stat-label', text: S.statElement }),
+                  h('span', {
+                    class: 'stat-element',
+                    text: `${info.emoji} ${info.name}（${info.note}）`,
+                  }),
                 ]),
               ]),
               h('p', { class: 'hint-line', text: elementReason(stats.element) }),
               h('p', { class: 'hint-line', text: hint }),
-              h('div', { class: 'action-row' }, actionButtons),
             ]),
           ]),
           h('div', { class: 'draw-footer' }, [
@@ -147,11 +162,10 @@ export function createPreviewScene(ctx: SceneContext): Scene {
       built.onEvent((name, self) => {
         if (name === 'projectile') {
           const from = self.muzzleWorld();
-          stage.launchProjectile(
-            from,
-            new THREE.Vector3(from.x + 4.5, from.y + 0.3, from.z),
-            self.headCanvas,
-          );
+          const to = from.clone();
+          to.x += 4.5;
+          to.y += 0.3;
+          stage.launchProjectile(from, to, self.headCanvas);
           audio.play('hitPaper');
         }
         if (name === 'impact') audio.play(hitSfxFor(stats.element));

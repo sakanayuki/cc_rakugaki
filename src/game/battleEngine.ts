@@ -3,6 +3,7 @@
  * 画面側はこのイベントを順番に演出として再生する。
  */
 
+import type { Element } from './element';
 import { elementMultiplier } from './element';
 import type { RNG } from './rng';
 import { randRange, systemRng } from './rng';
@@ -18,7 +19,7 @@ export interface Combatant {
 export type AttackResult = 'hit' | 'dodge' | 'guard';
 
 export type BattleEvent =
-  | { type: 'start'; first: Side }
+  | { type: 'start'; first: Side; specialUnlockRound: number }
   | {
       type: 'attack';
       actor: Side;
@@ -26,20 +27,27 @@ export type BattleEvent =
       result: AttackResult;
       damage: number;
       elementMul: 0.5 | 1 | 2;
+      /** 会心の一撃だったか */
+      critical: boolean;
       hpAfter: number;
     }
-  /** 3往復して決着がつかなかった。ここでプレイヤーの入力を待つ */
+  /** 規定ラウンド戦って決着がつかなかった。ここでプレイヤーの入力を待つ */
   | { type: 'specialReady' }
   | { type: 'special'; damage: number; hpAfter: number }
   | { type: 'end'; winner: Side };
 
-/** 互いに何回攻撃したら必殺技が解禁されるか */
+/** 通常、互いに何回攻撃したら必殺技が解禁されるか */
 export const MAX_ROUNDS = 3;
+/** 不利属性の救済で早められたときのラウンド数 */
+export const EARLY_UNLOCK_ROUNDS = 2;
 /** 回避率の下限・上限（％） */
 export const DODGE_MIN = 5;
 export const DODGE_MAX = 25;
 /** 防御が発生する確率 */
 export const GUARD_CHANCE = 0.15;
+/** 会心の一撃が出る確率と、その倍率 */
+export const CRIT_CHANCE = 0.1;
+export const CRIT_MULTIPLIER = 2;
 /** ダメージのゆらぎ */
 export const DAMAGE_VARIANCE = { min: 0.85, max: 1.15 } as const;
 
@@ -50,9 +58,35 @@ export function dodgeChance(attackerSpd: number, defenderSpd: number): number {
   return Math.max(DODGE_MIN, Math.min(DODGE_MAX, DODGE_MIN + (defenderSpd - attackerSpd)));
 }
 
+/** その相手はプレイヤーにとって不利か（相手の攻撃が2倍になる関係か） */
+export function isDisadvantaged(playerElement: Element, enemyElement: Element): boolean {
+  return elementMultiplier(enemyElement, playerElement) === 2;
+}
+
+/**
+ * 必殺技が解禁されるまでのラウンド数。
+ * 最終戦で不利属性を引いた場合だけ早める（そのままでは勝率がほぼ0になるため）。
+ */
+export function specialUnlockRound(
+  playerElement: Element,
+  enemyElement: Element,
+  isFinalBattle: boolean,
+): number {
+  return isFinalBattle && isDisadvantaged(playerElement, enemyElement)
+    ? EARLY_UNLOCK_ROUNDS
+    : MAX_ROUNDS;
+}
+
+export interface BattleOptions {
+  rng?: RNG;
+  /** 必殺技が解禁されるまでのラウンド数。省略時は MAX_ROUNDS */
+  specialUnlockRound?: number;
+}
+
 export class Battle {
   readonly player: Combatant;
   readonly enemy: Combatant;
+  readonly specialUnlockRound: number;
   playerHp: number;
   enemyHp: number;
 
@@ -60,10 +94,11 @@ export class Battle {
   private status: BattleStatus = 'ready';
   private started = false;
 
-  constructor(player: Combatant, enemy: Combatant, rng: RNG = systemRng) {
+  constructor(player: Combatant, enemy: Combatant, options: BattleOptions = {}) {
     this.player = player;
     this.enemy = enemy;
-    this.rng = rng;
+    this.rng = options.rng ?? systemRng;
+    this.specialUnlockRound = options.specialUnlockRound ?? MAX_ROUNDS;
     this.playerHp = player.stats.maxHp;
     this.enemyHp = enemy.stats.maxHp;
   }
@@ -96,9 +131,9 @@ export class Battle {
     const events: BattleEvent[] = [];
     const first = this.firstMover;
     const second: Side = first === 'player' ? 'enemy' : 'player';
-    events.push({ type: 'start', first });
+    events.push({ type: 'start', first, specialUnlockRound: this.specialUnlockRound });
 
-    for (let round = 0; round < MAX_ROUNDS; round++) {
+    for (let round = 0; round < this.specialUnlockRound; round++) {
       for (const actor of [first, second]) {
         const event = this.resolveAttack(actor);
         events.push(event);
@@ -110,7 +145,7 @@ export class Battle {
       }
     }
 
-    // 3往復して決着がつかなかった → プレイヤーだけ必殺技が使える
+    // 決着がつかなかった → プレイヤーだけ必殺技が使える
     this.status = 'awaitingSpecial';
     events.push({ type: 'specialReady' });
     return events;
@@ -130,6 +165,10 @@ export class Battle {
     ];
   }
 
+  /**
+   * 1回の攻撃を解決する。
+   * 乱数は 回避 → 防御 → 会心 → ゆらぎ の順に消費する（テストの再現性のため固定）。
+   */
   private resolveAttack(actor: Side): Extract<BattleEvent, { type: 'attack' }> {
     const target: Side = actor === 'player' ? 'enemy' : 'player';
     const attacker = this.combatantOf(actor).stats;
@@ -145,13 +184,17 @@ export class Battle {
         result: 'dodge',
         damage: 0,
         elementMul,
+        critical: false,
         hpAfter: this.hpOf(target),
       };
     }
 
     const guarded = this.rng.next() < GUARD_CHANCE;
+    const critical = this.rng.next() < CRIT_CHANCE;
+    const critMul = critical ? CRIT_MULTIPLIER : 1;
     const variance = randRange(this.rng, DAMAGE_VARIANCE.min, DAMAGE_VARIANCE.max);
-    let damage = Math.max(1, Math.round(attacker.atk * elementMul * variance));
+
+    let damage = Math.max(1, Math.round(attacker.atk * elementMul * critMul * variance));
     if (guarded) damage = Math.max(1, Math.ceil(damage / 2));
 
     const hpAfter = Math.max(0, this.hpOf(target) - damage);
@@ -165,6 +208,7 @@ export class Battle {
       result: guarded ? 'guard' : 'hit',
       damage,
       elementMul,
+      critical,
       hpAfter,
     };
   }

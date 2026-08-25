@@ -12,7 +12,14 @@ import { computeFillMask, dilateFringe, isFillTooLarge, ALPHA_THRESHOLD } from '
 import type { CharacterDoc, DrawOp, PartId, StrokeOp } from './types';
 import { CANVAS_SIZE, COMPOSITE_ORDER, STEP_ORDER, createEmptyDoc } from './types';
 
-export type FillOutcome = 'ok' | 'too-large' | 'nothing';
+export type FillOutcome =
+  | 'ok'
+  /** 囲われていない場所（キャンバスの大半）を塗ろうとした */
+  | 'too-large'
+  /** 前工程で描いたパーツの上を塗ろうとした */
+  | 'blocked'
+  /** 塗る対象が無かった */
+  | 'nothing';
 
 /** 2D描画コンテキストつきのキャンバスを作る */
 export function createCanvas(width: number, height = width): HTMLCanvasElement {
@@ -107,9 +114,12 @@ export class PaintEngine {
       } else {
         // 塗りつぶしは、その時点の合成画像を境界にして再計算する
         const data = this.compositeData();
-        const result = computeFillMask(data.data, this.size, this.size, op.x, op.y);
+        const blocked = this.blockedMask(op.part);
+        const result = computeFillMask(data.data, this.size, this.size, op.x, op.y, { blocked });
         if (result) {
-          if (!result.seedOpaque) dilateFringe(result.mask, data.data, this.size, this.size);
+          if (!result.seedOpaque) {
+            dilateFringe(result.mask, data.data, this.size, this.size, blocked);
+          }
           this.paintMask(this.ctxs[op.part], result.mask, op.color);
         }
       }
@@ -203,11 +213,16 @@ export class PaintEngine {
    */
   fillAt(part: PartId, x: number, y: number, color: string): FillOutcome {
     const data = this.compositeData();
-    const result = computeFillMask(data.data, this.size, this.size, x, y);
+    const blocked = this.blockedMask(part);
+    if (blocked && blocked[Math.floor(y) * this.size + Math.floor(x)]) return 'blocked';
+
+    const result = computeFillMask(data.data, this.size, this.size, x, y, { blocked });
     if (!result) return 'nothing';
     if (isFillTooLarge(result.count, this.size, this.size)) return 'too-large';
 
-    if (!result.seedOpaque) dilateFringe(result.mask, data.data, this.size, this.size);
+    if (!result.seedOpaque) {
+      dilateFringe(result.mask, data.data, this.size, this.size, blocked);
+    }
     this.paintMask(this.ctxs[part], result.mask, color);
     this.doc.ops.push({
       seq: this.nextSeq++,
@@ -276,6 +291,38 @@ export class PaintEngine {
     this.composite.width = 0;
     this.composite.height = 0;
     this.counts.clear();
+  }
+
+  /**
+   * 前工程で描いたパーツの不透明ピクセル（1=侵入禁止）。
+   *
+   * 「かべ」としては効くが「塗れる面」ではない、という扱いにするためのマスク。
+   * これが無いと、あたまステップで からだ の内側をタップしたときに
+   * からだ を塗りつぶせてしまう（現在パーツのレイヤーが手前に合成されるため）。
+   *
+   * 範囲は seq ではなく STEP_ORDER で決まるので、同じ ops からは必ず同じ結果になる。
+   */
+  private blockedMask(part: PartId): Uint8Array | null {
+    const index = STEP_ORDER.indexOf(part);
+    if (index <= 0) return null;
+
+    // 合成用キャンバスを一時的に借りて、前工程だけを重ねる
+    this.compositeCtx.clearRect(0, 0, this.size, this.size);
+    for (let i = 0; i < index; i++) {
+      this.compositeCtx.drawImage(this.layers[STEP_ORDER[i]], 0, 0);
+    }
+    const { data } = this.compositeCtx.getImageData(0, 0, this.size, this.size);
+    this.compositeDirty = true;
+
+    const mask = new Uint8Array(this.size * this.size);
+    let any = false;
+    for (let pixel = 0; pixel < mask.length; pixel++) {
+      if (data[pixel * 4 + 3] >= ALPHA_THRESHOLD) {
+        mask[pixel] = 1;
+        any = true;
+      }
+    }
+    return any ? mask : null;
   }
 
   // ---------------------------------------------------------------- 内部

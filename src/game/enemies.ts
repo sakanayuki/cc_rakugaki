@@ -1,24 +1,56 @@
 /**
- * 敵6種。
+ * 敵9種（通常6種＋強敵3種）。
  * 見た目はプレイヤーと同じ CharacterDoc 形式（描画オペレーション列）で持つので、
  * リグ生成・アニメーション・描画のパイプラインを完全に共通化できる。
- * ステータスは固定（連勝によるスケーリングはしない）。
+ *
+ * 通常敵は固定ステータスを持つ。
+ * 強敵はステータスを持たず、プレイヤーの素ステータスの1.2倍として生成する。
+ * どちらも2戦目以降は 1.1 のべき乗で強くなる。
  */
 
 import type { CharacterDoc, DrawOp, PartId } from '../paint/types';
 import { CANVAS_SIZE } from '../paint/types';
+import type { Element } from './element';
 import type { Stats } from './stats';
+
+export type EnemyKind = 'normal' | 'strong';
 
 export interface EnemyDef {
   id: string;
   /** ひらがな表示名 */
   name: string;
+  kind: EnemyKind;
+  element: Element;
   /** ルーレットのセクター色 */
   themeColor: string;
   /** キャラクター性の一言 */
   flavor: string;
   doc: CharacterDoc;
-  stats: Stats;
+  /** 通常敵のみ。強敵はプレイヤー基準で生成するので持たない */
+  baseStats?: Stats;
+}
+
+/** 強敵が1戦目時点でプレイヤーの何倍の強さか */
+export const STRONG_RATIO = 1.2;
+
+/** 強敵の素ステータスをプレイヤーの素ステータスから作る */
+export function strongStatsFor(playerBase: Stats, element: Element): Stats {
+  return {
+    maxHp: Math.max(1, Math.round(playerBase.maxHp * STRONG_RATIO)),
+    atk: Math.max(1, Math.round(playerBase.atk * STRONG_RATIO)),
+    spd: Math.max(1, Math.round(playerBase.spd * STRONG_RATIO)),
+    element,
+  };
+}
+
+/** 連勝数に応じたスケールを掛ける */
+export function scaleStats(stats: Stats, scale: number): Stats {
+  return {
+    maxHp: Math.max(1, Math.round(stats.maxHp * scale)),
+    atk: Math.max(1, Math.round(stats.atk * scale)),
+    spd: Math.max(1, Math.round(stats.spd * scale)),
+    element: stats.element,
+  };
 }
 
 /** 描画オペレーションを組み立てるための小さなビルダー */
@@ -222,59 +254,181 @@ function witchDoc(): CharacterDoc {
   return b.build();
 }
 
-export const ENEMIES: readonly EnemyDef[] = [
+/** ゴツゴツおう: ゴロンの上位。岩の王冠をかぶった王 */
+function kingRockDoc(): CharacterDoc {
+  const b = new DocBuilder();
+  b.box('body', 512, 580, 360, 330, '#1f1a15', '#5a5148');
+  b.box('body', 512, 580, 200, 180, '#c9a227', '#7a6f60');
+  b.box('head', 512, 275, 280, 210, '#1f1a15', '#6e6459');
+  b.triangle('head', [372, 175], [432, 60], [492, 175], '#1f1a15', '#c9a227', 8);
+  b.triangle('head', [512, 175], [572, 55], [632, 175], '#1f1a15', '#c9a227', 8);
+  b.dot('head', 452, 275, 26, '#ffd83d');
+  b.dot('head', 575, 275, 26, '#ffd83d');
+  b.line('head', [440, 350], [585, 350], '#1f1a15', 16);
+  b.box('arms', 258, 565, 150, 330, '#1f1a15', '#5a5148');
+  b.box('arms', 766, 565, 150, 330, '#1f1a15', '#5a5148');
+  b.box('legs', 428, 815, 150, 175, '#1f1a15', '#463f38');
+  b.box('legs', 600, 815, 150, 175, '#1f1a15', '#463f38');
+  return b.build();
+}
+
+/** ザクザクおう: 三日月のような刃をもつ王 */
+function kingScissorsDoc(): CharacterDoc {
+  const b = new DocBuilder();
+  b.blob('body', 512, 590, 145, 195, '#140c26', '#4a2f7a');
+  b.line('body', [400, 545], [624, 545], '#c0c6d4', 20);
+  b.blob('head', 512, 295, 135, 150, '#140c26', '#5c3d94');
+  b.triangle('head', [392, 200], [428, 70], [478, 205], '#140c26', '#c0c6d4', 8);
+  b.triangle('head', [546, 205], [596, 70], [632, 200], '#140c26', '#c0c6d4', 8);
+  b.dot('head', 466, 300, 20, '#ff4d4d');
+  b.dot('head', 560, 300, 20, '#ff4d4d');
+  b.blob('arms', 300, 545, 70, 175, '#140c26', '#4a2f7a', 8);
+  b.line('arms', [268, 420], [230, 640], '#c0c6d4', 26);
+  b.blob('arms', 724, 545, 70, 175, '#140c26', '#4a2f7a', 8);
+  b.line('arms', [756, 420], [794, 640], '#c0c6d4', 26);
+  b.blob('legs', 452, 820, 55, 140, '#140c26', '#3a2560');
+  b.blob('legs', 574, 820, 55, 140, '#140c26', '#3a2560');
+  return b.build();
+}
+
+/** ヒラヒラおう: マントを広げた魔王 */
+function kingPaperDoc(): CharacterDoc {
+  const b = new DocBuilder();
+  b.triangle('body', [512, 390], [740, 790], [284, 790], '#0d1330', '#26346e');
+  b.dot('body', 512, 640, 42, '#ffd83d');
+  b.blob('head', 512, 285, 125, 130, '#0d1330', '#3a4a90');
+  b.triangle('head', [382, 190], [512, 45], [642, 190], '#0d1330', '#ffd83d', 8);
+  b.dot('head', 466, 290, 20, '#ff4d4d');
+  b.dot('head', 560, 290, 20, '#ff4d4d');
+  b.blob('arms', 252, 560, 130, 90, '#0d1330', '#26346e');
+  b.blob('arms', 772, 560, 130, 90, '#0d1330', '#26346e');
+  b.blob('legs', 452, 830, 52, 110, '#0d1330', '#1a2450');
+  b.blob('legs', 574, 830, 52, 110, '#0d1330', '#1a2450');
+  return b.build();
+}
+
+/**
+ * 通常敵6種。
+ * ステータスは第2版で再調整済み（HPは概ね据え置き、ATKを下げて事故死を減らした）。
+ * ATKの上限は「不利属性でも3ラウンド耐えられる」ことを基準にしている。
+ */
+export const NORMAL_ENEMIES: readonly EnemyDef[] = [
   {
     id: 'golem',
     name: 'ゴロン',
+    kind: 'normal',
+    element: 'rock',
     themeColor: '#a99a86',
     flavor: 'かたいけど おそい',
     doc: golemDoc(),
-    stats: { maxHp: 180, atk: 18, spd: 6, element: 'rock' },
+    baseStats: { maxHp: 150, atk: 17, spd: 5, element: 'rock' },
   },
   {
     id: 'robot',
     name: 'カチカチ',
+    kind: 'normal',
+    element: 'rock',
     themeColor: '#8fd0f2',
     flavor: 'バランスがた',
     doc: robotDoc(),
-    stats: { maxHp: 120, atk: 25, spd: 12, element: 'rock' },
+    baseStats: { maxHp: 115, atk: 21, spd: 12, element: 'rock' },
   },
   {
     id: 'crab',
     name: 'チョッキン',
+    kind: 'normal',
+    element: 'scissors',
     themeColor: '#ff9a8a',
     flavor: 'ハサミで きりつける',
     doc: crabDoc(),
-    stats: { maxHp: 100, atk: 22, spd: 14, element: 'scissors' },
+    baseStats: { maxHp: 105, atk: 20, spd: 14, element: 'scissors' },
   },
   {
     id: 'ninja',
     name: 'シュバにゃん',
+    kind: 'normal',
+    element: 'scissors',
     themeColor: '#b8a8e0',
     flavor: 'すばやくて よく よける',
     doc: ninjaDoc(),
-    stats: { maxHp: 80, atk: 20, spd: 22, element: 'scissors' },
+    baseStats: { maxHp: 88, atk: 19, spd: 22, element: 'scissors' },
   },
   {
     id: 'bird',
     name: 'パタパタ',
+    kind: 'normal',
+    element: 'paper',
     themeColor: '#ffe58a',
     flavor: 'はねを とばす',
     doc: birdDoc(),
-    stats: { maxHp: 90, atk: 16, spd: 18, element: 'paper' },
+    baseStats: { maxHp: 98, atk: 18, spd: 18, element: 'paper' },
   },
   {
     id: 'witch',
     name: 'フワリン',
+    kind: 'normal',
+    element: 'paper',
     themeColor: '#c9a2ea',
     flavor: 'まほうが とても つよい',
     doc: witchDoc(),
-    stats: { maxHp: 140, atk: 30, spd: 10, element: 'paper' },
+    baseStats: { maxHp: 132, atk: 22, spd: 9, element: 'paper' },
   },
 ];
+
+/**
+ * 強敵3種。グー・チョキ・パーを1体ずつ担当する。
+ * ステータスは持たず、プレイヤーの素ステータスの1.2倍として生成される。
+ */
+export const STRONG_ENEMIES: readonly EnemyDef[] = [
+  {
+    id: 'kingRock',
+    name: 'ゴツゴツおう',
+    kind: 'strong',
+    element: 'rock',
+    themeColor: '#6e6459',
+    flavor: 'いわの おうさま',
+    doc: kingRockDoc(),
+  },
+  {
+    id: 'kingScissors',
+    name: 'ザクザクおう',
+    kind: 'strong',
+    element: 'scissors',
+    themeColor: '#5c3d94',
+    flavor: 'やいばの おうさま',
+    doc: kingScissorsDoc(),
+  },
+  {
+    id: 'kingPaper',
+    name: 'ヒラヒラおう',
+    kind: 'strong',
+    element: 'paper',
+    themeColor: '#26346e',
+    flavor: 'まおうさま',
+    doc: kingPaperDoc(),
+  },
+];
+
+export const ENEMIES: readonly EnemyDef[] = [...NORMAL_ENEMIES, ...STRONG_ENEMIES];
 
 export function enemyById(id: string): EnemyDef {
   const enemy = ENEMIES.find((candidate) => candidate.id === id);
   if (!enemy) throw new Error(`しらない てき です: ${id}`);
   return enemy;
+}
+
+/** 強敵のうち、指定した属性の1体 */
+export function strongEnemyOf(element: Element): EnemyDef {
+  const enemy = STRONG_ENEMIES.find((candidate) => candidate.element === element);
+  if (!enemy) throw new Error(`しらない ぞくせい です: ${element}`);
+  return enemy;
+}
+
+/**
+ * その試合での敵の実効ステータス。
+ * 通常敵は固定値、強敵はプレイヤー基準。どちらも連勝数のスケールが掛かる。
+ */
+export function enemyStatsFor(enemy: EnemyDef, playerBase: Stats, scale: number): Stats {
+  const base = enemy.baseStats ?? strongStatsFor(playerBase, enemy.element);
+  return scaleStats(base, scale);
 }

@@ -2,10 +2,14 @@
 
 import { gameState } from '../app/GameState';
 import type { Scene, SceneContext } from '../app/SceneManager';
-import { hasSave, loadDoc } from '../app/storage';
+import { loadDoc } from '../app/storage';
 import { button, confirmDialog, h } from '../ui/components';
 import { S } from '../ui/strings';
+import { thumbnailFromDoc } from '../paint/thumbnail';
 import { createEmptyDoc } from '../paint/types';
+
+/** メニューに出す絵のプレビューの一辺（px） */
+const THUMBNAIL_SIZE = 72;
 
 export function createMenuScene(ctx: SceneContext): Scene {
   return {
@@ -13,7 +17,10 @@ export function createMenuScene(ctx: SceneContext): Scene {
       // メニューに戻った時点で連勝チャレンジはリセットされる
       gameState.resetRun();
 
-      const saveExists = hasSave();
+      const savedDoc = loadDoc();
+      const saveExists = savedDoc !== null;
+      // 保存された絵のサムネイル。生成に使ったエンジンは thumbnailFromDoc 内で解放される
+      const thumbnail = savedDoc ? thumbnailFromDoc(savedDoc, THUMBNAIL_SIZE * 2) : null;
 
       const newButton = button(S.menuNew, {
         variant: 'primary',
@@ -34,19 +41,33 @@ export function createMenuScene(ctx: SceneContext): Scene {
         size: 'huge',
         disabled: !saveExists,
         onClick: () => {
-          const doc = loadDoc();
-          if (!doc) return;
+          if (!savedDoc) return;
           gameState.clearCharacter();
-          gameState.doc = doc;
+          gameState.doc = savedDoc;
           ctx.go('draw', { resume: true });
         },
       });
+
+      // セーブがあるときだけ、ボタンの横に小さく絵を出す
+      const continueRow = thumbnail
+        ? h('div', { class: 'continue-row' }, [
+            h('div', { class: 'save-thumb' }, [
+              h('img', {
+                alt: S.menuContinue,
+                src: thumbnail.toDataURL(),
+                width: String(THUMBNAIL_SIZE),
+                height: String(THUMBNAIL_SIZE),
+              }),
+            ]),
+            continueButton,
+          ])
+        : continueButton;
 
       root.append(
         h('div', { class: 'scene scene-center' }, [
           h('h1', { class: 'menu-logo', text: S.appTitle }),
           h('p', { class: 'menu-sub', text: S.appSub }),
-          h('div', { class: 'menu-buttons' }, [newButton, continueButton]),
+          h('div', { class: 'menu-buttons' }, [newButton, continueRow]),
           h('p', { class: 'menu-hint', text: S.menuHint }),
         ]),
       );

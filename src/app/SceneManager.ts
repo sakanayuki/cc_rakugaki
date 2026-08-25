@@ -12,7 +12,7 @@ export interface SceneParamMap {
   preview: void;
   roulette: void;
   battle: { enemyId: string };
-  result: { outcome: 'win' | 'lose'; enemyId: string };
+  result: { outcome: 'win' | 'lose'; enemyId: string; winKind: 'ko' | 'special' };
 }
 
 export interface SceneContext {

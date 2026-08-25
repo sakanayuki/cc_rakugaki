@@ -45,6 +45,9 @@ const GUIDES: Record<PartId, GuideShape[]> = {
 
 type Tool = 'pen' | 'fill';
 
+/** いま描いていないパーツの表示濃度。半透明にして現在の線を見分けやすくする */
+const OTHER_PART_ALPHA = 0.5;
+
 /** 角丸の正方形パス。roundRect が無い古いブラウザでは直角の四角で代用する */
 function paperPath(context: CanvasRenderingContext2D, x: number, y: number, size: number): void {
   context.beginPath();
@@ -74,6 +77,7 @@ export function createDrawScene(ctx: SceneContext, params: SceneParamMap['draw']
   let dirty = true;
   let frameHandle = 0;
   let disposed = false;
+  let toastTimer = 0;
 
   const canvas = h('canvas', { class: 'paint-canvas' });
   const titleNode = h('h2', { class: 'draw-title' });
@@ -211,10 +215,16 @@ export function createDrawScene(ctx: SceneContext, params: SceneParamMap['draw']
     }
     context.restore();
 
-    // 描いた絵（合成キャンバスを経由せず、レイヤーを直接重ねて描く）
+    // いま描いているパーツ以外は半透明にする。
+    // さらに現在パーツを最前面に描くことで、合成順で後ろになるステップ（あし等）でも
+    // 「いま引いた線」が必ず見えるようにする。
+    context.globalAlpha = OTHER_PART_ALPHA;
     for (const part of COMPOSITE_ORDER) {
+      if (part === step) continue;
       context.drawImage(engine.layerOf(part), 0, 0, area.side, area.side);
     }
+    context.globalAlpha = 1;
+    context.drawImage(engine.layerOf(step), 0, 0, area.side, area.side);
     context.restore();
 
     // 画用紙のふち
@@ -237,6 +247,18 @@ export function createDrawScene(ctx: SceneContext, params: SceneParamMap['draw']
     dirty = true;
   }
 
+  /** ヒント欄を一時的に警告文に差し替える */
+  function toast(message: string): void {
+    if (toastTimer) clearTimeout(toastTimer);
+    hintNode.textContent = message;
+    hintNode.classList.add('hint-warn');
+    toastTimer = window.setTimeout(() => {
+      toastTimer = 0;
+      hintNode.classList.remove('hint-warn');
+      hintNode.textContent = S.stepHint[step];
+    }, 1800);
+  }
+
   // ---------------------------------------------------------------- 入力
 
   function onPointerDown(event: PointerEvent): void {
@@ -249,6 +271,8 @@ export function createDrawScene(ctx: SceneContext, params: SceneParamMap['draw']
     if (tool === 'fill') {
       const outcome = engine.fillAt(step, point.x, point.y, color);
       audio.play(outcome === 'ok' ? 'fill' : 'nope');
+      if (outcome === 'blocked') toast(S.fillBlocked);
+      else if (outcome === 'too-large') toast(S.fillTooLarge);
       refresh();
       return;
     }
@@ -328,7 +352,7 @@ export function createDrawScene(ctx: SceneContext, params: SceneParamMap['draw']
   /** ステップ・ツール・ボタンの有効状態をまとめて更新する */
   function refresh(): void {
     titleNode.textContent = S.stepTitle[step];
-    hintNode.textContent = S.stepHint[step];
+    if (!toastTimer) hintNode.textContent = S.stepHint[step];
 
     const index = currentIndex();
     dots.forEach((dot, i) => {
@@ -389,6 +413,7 @@ export function createDrawScene(ctx: SceneContext, params: SceneParamMap['draw']
 
     unmount() {
       disposed = true;
+      if (toastTimer) clearTimeout(toastTimer);
       if (frameHandle) cancelAnimationFrame(frameHandle);
       canvas.removeEventListener('pointerdown', onPointerDown);
       canvas.removeEventListener('pointermove', onPointerMove);

@@ -46,12 +46,12 @@ export function createResultScene(ctx: SceneContext, params: SceneParamMap['resu
   const won = params.outcome === 'win';
   const enemy = enemyById(params.enemyId);
 
-  // 勝利ならここで強化を確定させる
+  // 勝利ならここで強化を確定させる。上乗せ量は勝ち方で変わる
   let before: Stats | null = null;
   let after: Stats | null = null;
   if (won && gameState.baseStats) {
     before = gameState.effectiveStats();
-    gameState.registerWin();
+    gameState.registerWin(params.winKind);
     after = gameState.effectiveStats();
   }
   const champion = won && gameState.isChampion;
@@ -101,7 +101,7 @@ export function createResultScene(ctx: SceneContext, params: SceneParamMap['resu
       const panel: HTMLElement[] = [];
       if (won && before && after) {
         panel.push(
-          h('p', { class: 'hint-line', text: S.powerUp }),
+          h('p', { class: 'hint-line', text: params.winKind === 'ko' ? S.powerUpKo : S.powerUpSpecial }),
           h('div', { class: 'stat-panel' }, [
             upgradeRow(S.statHp, before.maxHp, after.maxHp, 'maxHp'),
             upgradeRow(S.statAtk, before.atk, after.atk, 'atk'),

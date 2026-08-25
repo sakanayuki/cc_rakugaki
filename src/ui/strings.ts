@@ -44,6 +44,8 @@ export const S = {
   widthMid: 'ふつう',
   widthFat: 'ふとい',
   confirmResetPart: 'いま かいた ぶんを\nぜんぶ けしても いい？',
+  fillBlocked: 'そこは まえに かいた ところだよ',
+  fillTooLarge: 'かこまれて いないと ぬれないよ',
   drawSomething: 'なにか かいてね',
 
   // --- プレビュー ---
@@ -55,6 +57,8 @@ export const S = {
   statHp: '❤️ たいりょく',
   statAtk: '💪 こうげき',
   statSpd: '👟 はやさ',
+  statElement: '⚔️ ぞくせい',
+  actionPanelTitle: '▶ うごかして みよう',
   toDraw: '✏️ えを なおす',
   toBattle: '⚔️ たたかいへ すすむ！',
   dragHint: 'ゆびで よこに うごかすと まわるよ',
@@ -65,6 +69,10 @@ export const S = {
   spinning: 'まわってる…',
   respin: '🔄 もういちど まわす',
   fight: '⚔️ たたかう！',
+  finalRouletteTitle: '👑 さいごの たたかい！',
+  strongTag: 'つよい！',
+  badMatchupTitle: '⚠️ あいしょうが わるいよ！',
+  badMatchupDetail: 'きみの こうげきは はんぶん。あいての こうげきは 2ばい！',
 
   // --- 戦闘 ---
   battleStart: 'たたかい スタート！',
@@ -75,12 +83,15 @@ export const S = {
   guarded: 'ガード！ ダメージ はんぶん！',
   superEffective: 'こうかは ばつぐん！ ×2',
   notEffective: 'いまいち…… ×はんぶん',
+  critical: '⚡ かいしんの いちげき！ ⚡',
+  earlySpecial: 'あいしょうが わるいから、はやく ひっさつわざが つかえる！',
 
   // --- リザルト ---
   winTitle: 'かった！',
   loseTitle: 'まけちゃった…',
   championTitle: 'ゆうしょう！！',
-  powerUp: 'つよさが 1.5ばいに アップ！',
+  powerUpKo: 'ひっさつわざを つかわずに かった！ つよさ +20%',
+  powerUpSpecial: 'ひっさつわざで かった！ つよさ +10%',
   nextBattle: '➡️ つぎの たたかいへ！',
   stopHere: '🏠 ここで やめる',
   toMenu: '🏠 メニューへ もどる',

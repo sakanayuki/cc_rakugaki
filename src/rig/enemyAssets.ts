@@ -4,8 +4,8 @@
  */
 
 import { enemyById } from '../game/enemies';
-import { createCanvas, PaintEngine } from '../paint/PaintEngine';
-import { COMPOSITE_ORDER } from '../paint/types';
+import { PaintEngine } from '../paint/PaintEngine';
+import { thumbnailFromEngine } from '../paint/thumbnail';
 import type { CharacterAnalysis } from './partAnalyzer';
 import { analyzeCharacter } from './partAnalyzer';
 
@@ -16,48 +16,6 @@ export interface EnemyAssets {
 
 const cache = new Map<string, EnemyAssets>();
 
-/** キャラクター全体を切り抜いて正方形のサムネイルにする */
-function makeThumbnail(engine: PaintEngine, analysis: CharacterAnalysis, size = 192): HTMLCanvasElement {
-  const canvas = createCanvas(size);
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return canvas;
-
-  let minX = Number.POSITIVE_INFINITY;
-  let minY = Number.POSITIVE_INFINITY;
-  let maxX = Number.NEGATIVE_INFINITY;
-  let maxY = Number.NEGATIVE_INFINITY;
-  for (const part of Object.values(analysis.parts)) {
-    minX = Math.min(minX, part.bbox.minX);
-    minY = Math.min(minY, part.bbox.minY);
-    maxX = Math.max(maxX, part.bbox.maxX);
-    maxY = Math.max(maxY, part.bbox.maxY);
-  }
-  if (!Number.isFinite(minX)) return canvas;
-
-  const width = maxX - minX + 1;
-  const height = maxY - minY + 1;
-  const scale = (size * 0.94) / Math.max(width, height);
-  const drawWidth = width * scale;
-  const drawHeight = height * scale;
-  const offsetX = (size - drawWidth) / 2;
-  const offsetY = (size - drawHeight) / 2;
-
-  for (const part of COMPOSITE_ORDER) {
-    ctx.drawImage(
-      engine.layerOf(part),
-      minX,
-      minY,
-      width,
-      height,
-      offsetX,
-      offsetY,
-      drawWidth,
-      drawHeight,
-    );
-  }
-  return canvas;
-}
-
 export function getEnemyAssets(id: string): EnemyAssets {
   const cached = cache.get(id);
   if (cached) return cached;
@@ -65,7 +23,10 @@ export function getEnemyAssets(id: string): EnemyAssets {
   const enemy = enemyById(id);
   const engine = PaintEngine.fromDoc(structuredClone(enemy.doc));
   const analysis = analyzeCharacter(engine);
-  const assets: EnemyAssets = { analysis, thumbnail: makeThumbnail(engine, analysis) };
+  const assets: EnemyAssets = {
+    analysis,
+    thumbnail: thumbnailFromEngine(engine) ?? document.createElement('canvas'),
+  };
 
   // 解析結果とサムネイルは切り抜き済みの小さなキャンバスなので、
   // ここで元の 1024x1024 レイヤー（約20MB）を手放す。

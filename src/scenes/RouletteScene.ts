@@ -1,15 +1,20 @@
 /**
  * 対戦相手ルーレット画面。
- * スタートを押すと回りはじめ、2秒かけて減速して勝手に止まる。
- * 止まる場所は押した瞬間に乱数で決めてから逆算するので、演出と結果はズレない。
- * 再抽選は何度でもできる（同じ相手との連戦も許容）。
+ *
+ * 1〜4戦目: 通常敵6種（重み1.0）＋強敵3種（重み0.25）の重み付きルーレット。
+ * 5戦目   : 強敵3種のみ。プレイヤーに不利な相手が50%、残りが25%ずつ。再抽選は不可。
+ *
+ * 止まる場所は押した瞬間に重み付き乱数で決めてから角度を逆算するので、演出と結果はズレない。
  */
 
 import { audio } from '../app/audio';
 import { gameState } from '../app/GameState';
 import type { Scene, SceneContext } from '../app/SceneManager';
-import { ENEMIES } from '../game/enemies';
-import { randInt, systemRng } from '../game/rng';
+import { isDisadvantaged } from '../game/battleEngine';
+import type { EnemyDef } from '../game/enemies';
+import { NORMAL_ENEMIES, STRONG_ENEMIES, enemyStatsFor } from '../game/enemies';
+import { systemRng } from '../game/rng';
+import type { Stats } from '../game/stats';
 import { starsFor } from '../game/stats';
 import { getEnemyAssets } from '../rig/enemyAssets';
 import { button, h, starString } from '../ui/components';
@@ -19,24 +24,97 @@ import { ELEMENT_INFO, S, streakLabel } from '../ui/strings';
 const SPIN_DURATION = 2;
 /** 止まるまでに最低何回転させるか */
 const MIN_TURNS = 4;
-const SECTOR_COUNT = ENEMIES.length;
-const SECTOR_ANGLE = (Math.PI * 2) / SECTOR_COUNT;
 /** 矢印が指している方向（真上） */
 const POINTER_ANGLE = -Math.PI / 2;
+/** 強敵のセクターは通常敵の1/4の面積にする */
+const STRONG_WEIGHT = 0.25;
+/** 最終戦で不利な相手に割り当てる重み（残り2体が1.0なので 2:1:1 = 50%:25%:25%） */
+const FINAL_BAD_WEIGHT = 2;
+
+interface Slot {
+  enemy: EnemyDef;
+  weight: number;
+  /** 盤面ローカルでの開始角 */
+  start: number;
+  /** セクターの角度 */
+  angle: number;
+  stats: Stats;
+  disadvantaged: boolean;
+}
 
 export function createRouletteScene(ctx: SceneContext): Scene {
   const canvas = h('canvas', { class: 'wheel-canvas' });
   const cardHost = h('div', {});
   const buttonRow = h('div', { class: 'row row-center' });
 
-  let rotation = -SECTOR_ANGLE / 2;
+  const isFinal = gameState.isFinalBattle;
+  const playerBase = gameState.baseStats;
+  if (!playerBase) {
+    // 通常ここには来ない（プレビューを経由しないとルーレットに入れない）
+    ctx.go('menu');
+    return { mount() {}, unmount() {} };
+  }
+  const playerElement = playerBase.element;
+  const scale = gameState.enemyScale;
+
+  /** 出走表を作る。最終戦は強敵のみ・不利な相手を厚くする */
+  const slots: Slot[] = (() => {
+    const entries: { enemy: EnemyDef; weight: number }[] = isFinal
+      ? STRONG_ENEMIES.map((enemy) => ({
+          enemy,
+          weight: isDisadvantaged(playerElement, enemy.element) ? FINAL_BAD_WEIGHT : 1,
+        }))
+      : [
+          ...NORMAL_ENEMIES.map((enemy) => ({ enemy, weight: 1 })),
+          ...STRONG_ENEMIES.map((enemy) => ({ enemy, weight: STRONG_WEIGHT })),
+        ];
+
+    const total = entries.reduce((sum, entry) => sum + entry.weight, 0);
+    let cursor = 0;
+    return entries.map((entry) => {
+      const angle = (Math.PI * 2 * entry.weight) / total;
+      const slot: Slot = {
+        enemy: entry.enemy,
+        weight: entry.weight,
+        start: cursor,
+        angle,
+        stats: enemyStatsFor(entry.enemy, playerBase, scale),
+        disadvantaged: isDisadvantaged(playerElement, entry.enemy.element),
+      };
+      cursor += angle;
+      return slot;
+    });
+  })();
+
+  const thumbnails = slots.map((slot) => getEnemyAssets(slot.enemy.id).thumbnail);
+
+  let rotation = -slots[0].angle / 2;
   let spinning = false;
   let frameHandle = 0;
   let disposed = false;
-  let selectedIndex: number | null = null;
+  let selected: number | null = null;
   let lastTickSector = -1;
 
-  const thumbnails = ENEMIES.map((enemy) => getEnemyAssets(enemy.id).thumbnail);
+  /** 重みに比例した抽選 */
+  function pickSlot(): number {
+    const total = slots.reduce((sum, slot) => sum + slot.weight, 0);
+    let roll = systemRng.next() * total;
+    for (let i = 0; i < slots.length; i++) {
+      roll -= slots[i].weight;
+      if (roll <= 0) return i;
+    }
+    return slots.length - 1;
+  }
+
+  /** 矢印の下に来ているセクター番号 */
+  function sectorUnderPointer(): number {
+    const twoPi = Math.PI * 2;
+    const local = (((POINTER_ANGLE - rotation) % twoPi) + twoPi) % twoPi;
+    for (let i = 0; i < slots.length; i++) {
+      if (local >= slots[i].start && local < slots[i].start + slots[i].angle) return i;
+    }
+    return slots.length - 1;
+  }
 
   function drawWheel(): void {
     const rect = canvas.getBoundingClientRect();
@@ -59,51 +137,54 @@ export function createRouletteScene(ctx: SceneContext): Scene {
     context.save();
     context.translate(center, center);
 
-    // 外周のふち
     context.beginPath();
     context.arc(0, 0, radius, 0, Math.PI * 2);
     context.fillStyle = '#ffffff';
     context.fill();
 
     context.rotate(rotation);
-    for (let i = 0; i < SECTOR_COUNT; i++) {
-      const start = i * SECTOR_ANGLE;
+    slots.forEach((slot, i) => {
       context.beginPath();
       context.moveTo(0, 0);
-      context.arc(0, 0, radius - 10, start, start + SECTOR_ANGLE);
+      context.arc(0, 0, radius - 10, slot.start, slot.start + slot.angle);
       context.closePath();
-      context.fillStyle = ENEMIES[i].themeColor;
+      context.fillStyle = slot.enemy.themeColor;
       context.fill();
-      // 当たったセクターだけ金色のふちで目立たせる
-      const chosen = i === selectedIndex;
-      context.strokeStyle = chosen ? '#ffd83d' : '#ffffff';
-      context.lineWidth = chosen ? 10 : 5;
+      // 強敵は金のふち。当たったセクターはさらに太く
+      const strong = slot.enemy.kind === 'strong';
+      context.strokeStyle = i === selected ? '#ffd83d' : strong ? '#e0b422' : '#ffffff';
+      context.lineWidth = i === selected ? 10 : strong ? 7 : 5;
       context.stroke();
-    }
+    });
 
-    // 各セクターに敵の絵と名前
-    for (let i = 0; i < SECTOR_COUNT; i++) {
-      const angle = (i + 0.5) * SECTOR_ANGLE;
+    // 各セクターに敵の絵と名前。
+    // 強敵のセクターは1/4の幅しかないので、名前は入れずに王冠マークだけにする
+    // （名前を書くと隣のセクターと重なって読めなくなる）。名前はカードで見せる。
+    slots.forEach((slot, i) => {
+      const mid = slot.start + slot.angle / 2;
+      const narrow = slot.angle < 0.5;
       context.save();
-      context.rotate(angle);
-      const iconSize = radius * 0.34;
-      context.drawImage(
-        thumbnails[i],
-        radius * 0.56 - iconSize / 2,
-        -iconSize / 2,
-        iconSize,
-        iconSize,
-      );
+      context.rotate(mid);
+
+      const iconSize = radius * (narrow ? 0.14 : 0.34);
+      const iconAt = radius * (narrow ? 0.7 : 0.56);
+      context.drawImage(thumbnails[i], iconAt - iconSize / 2, -iconSize / 2, iconSize, iconSize);
+
       context.rotate(Math.PI / 2);
-      context.fillStyle = '#3b3226';
-      context.font = `800 ${Math.max(11, radius * 0.085)}px "Hiragino Maru Gothic ProN", system-ui, sans-serif`;
       context.textAlign = 'center';
       context.textBaseline = 'middle';
-      context.fillText(ENEMIES[i].name, 0, -radius * 0.86);
+      if (narrow) {
+        context.font = `${Math.max(11, radius * 0.075)}px system-ui, sans-serif`;
+        context.fillText('👑', 0, -radius * 0.9);
+      } else {
+        // 強敵のセクター色は濃いので、文字は白にしないと読めない
+        context.fillStyle = slot.enemy.kind === 'strong' ? '#ffffff' : '#3b3226';
+        context.font = `800 ${Math.max(11, radius * 0.085)}px "Hiragino Maru Gothic ProN", system-ui, sans-serif`;
+        context.fillText(slot.enemy.name, 0, -radius * 0.86);
+      }
       context.restore();
-    }
+    });
 
-    // 中心のつまみ
     context.beginPath();
     context.arc(0, 0, radius * 0.14, 0, Math.PI * 2);
     context.fillStyle = '#ffffff';
@@ -114,22 +195,16 @@ export function createRouletteScene(ctx: SceneContext): Scene {
     context.restore();
   }
 
-  /** 矢印の下に来ているセクター番号 */
-  function sectorUnderPointer(): number {
-    const normalized = ((POINTER_ANGLE - rotation) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
-    return Math.floor(normalized / SECTOR_ANGLE) % SECTOR_COUNT;
-  }
-
   function spin(): void {
     if (spinning) return;
     spinning = true;
-    selectedIndex = null;
+    selected = null;
     cardHost.replaceChildren();
     renderButtons();
 
-    const index = randInt(systemRng, SECTOR_COUNT);
-    const sectorCenter = (index + 0.5) * SECTOR_ANGLE;
-    // 矢印の位置にそのセクターの中心が来る回転角を求め、そこに4回転ぶん足す
+    const index = pickSlot();
+    const slot = slots[index];
+    const sectorCenter = slot.start + slot.angle / 2;
     let target = POINTER_ANGLE - sectorCenter;
     while (target < rotation + MIN_TURNS * Math.PI * 2) target += Math.PI * 2;
 
@@ -139,10 +214,8 @@ export function createRouletteScene(ctx: SceneContext): Scene {
 
     const step = (now: number) => {
       if (disposed) return;
-      const elapsed = (now - startTime) / 1000;
-      const progress = Math.min(1, elapsed / SPIN_DURATION);
-      const eased = 1 - (1 - progress) ** 3;
-      rotation = start + (target - start) * eased;
+      const progress = Math.min(1, (now - startTime) / 1000 / SPIN_DURATION);
+      rotation = start + (target - start) * (1 - (1 - progress) ** 3);
       drawWheel();
 
       const sector = sectorUnderPointer();
@@ -156,10 +229,10 @@ export function createRouletteScene(ctx: SceneContext): Scene {
         return;
       }
       rotation = target;
-      drawWheel();
       spinning = false;
-      selectedIndex = index;
-      audio.play('spinStop');
+      selected = index;
+      drawWheel();
+      audio.play(slot.disadvantaged ? 'warn' : 'spinStop');
       renderCard(index);
       renderButtons();
     };
@@ -167,24 +240,39 @@ export function createRouletteScene(ctx: SceneContext): Scene {
   }
 
   function renderCard(index: number): void {
-    const enemy = ENEMIES[index];
-    const info = ELEMENT_INFO[enemy.stats.element];
-    const image = h('img', { alt: enemy.name, src: thumbnails[index].toDataURL() });
-    cardHost.replaceChildren(
-      h('div', { class: 'enemy-card' }, [
-        image,
-        h('div', {}, [
-          h('div', { class: 'enemy-name', text: enemy.name }),
-          h('div', { class: 'enemy-meta' }, [
-            h('span', { text: `${info.emoji} ${info.name}（${info.note}）` }),
-            h('span', { text: `${S.statHp} ${starString(starsFor(enemy.stats.maxHp, 'maxHp'))}` }),
-            h('span', { text: `${S.statAtk} ${starString(starsFor(enemy.stats.atk, 'atk'))}` }),
-            h('span', { text: `${S.statSpd} ${starString(starsFor(enemy.stats.spd, 'spd'))}` }),
-            h('span', { text: enemy.flavor }),
-          ]),
+    const slot = slots[index];
+    const info = ELEMENT_INFO[slot.enemy.element];
+    const strong = slot.enemy.kind === 'strong';
+
+    const meta = h('div', { class: 'enemy-meta' }, [
+      h('span', { text: `${info.emoji} ${info.name}（${info.note}）` }),
+      h('span', { text: `${S.statHp} ${starString(starsFor(slot.stats.maxHp, 'maxHp'))}` }),
+      h('span', { text: `${S.statAtk} ${starString(starsFor(slot.stats.atk, 'atk'))}` }),
+      h('span', { text: `${S.statSpd} ${starString(starsFor(slot.stats.spd, 'spd'))}` }),
+      h('span', { text: slot.enemy.flavor }),
+    ]);
+
+    const card = h('div', { class: strong ? 'enemy-card strong' : 'enemy-card' }, [
+      h('img', { alt: slot.enemy.name, src: thumbnails[index].toDataURL() }),
+      h('div', {}, [
+        h('div', { class: 'enemy-name' }, [
+          h('span', { text: slot.enemy.name }),
+          ...(strong ? [h('span', { class: 'strong-tag', text: S.strongTag })] : []),
         ]),
+        meta,
       ]),
-    );
+    ]);
+
+    const children = slot.disadvantaged
+      ? [
+          h('div', { class: 'warn-banner' }, [
+            h('div', { text: S.badMatchupTitle }),
+            h('small', { text: S.badMatchupDetail }),
+          ]),
+          card,
+        ]
+      : [card];
+    cardHost.replaceChildren(...children);
   }
 
   function renderButtons(): void {
@@ -192,22 +280,25 @@ export function createRouletteScene(ctx: SceneContext): Scene {
       buttonRow.replaceChildren(button(S.spinning, { size: 'huge', disabled: true }));
       return;
     }
-    if (selectedIndex === null) {
+    if (selected === null) {
       buttonRow.replaceChildren(button(S.spin, { variant: 'primary', size: 'huge', onClick: spin }));
       return;
     }
-    const enemy = ENEMIES[selectedIndex];
-    buttonRow.replaceChildren(
-      button(S.respin, { variant: 'ghost', onClick: spin }),
-      button(S.fight, {
-        variant: 'danger',
-        size: 'huge',
-        onClick: () => {
-          gameState.enemyId = enemy.id;
-          ctx.go('battle', { enemyId: enemy.id });
-        },
-      }),
-    );
+    const slot = slots[selected];
+    const fight = button(S.fight, {
+      variant: 'danger',
+      size: 'huge',
+      onClick: () => {
+        gameState.enemyId = slot.enemy.id;
+        ctx.go('battle', { enemyId: slot.enemy.id });
+      },
+    });
+    // 最終戦は一発勝負。回し直せると不利50%の重み付けが無意味になる
+    if (isFinal) {
+      buttonRow.replaceChildren(fight);
+      return;
+    }
+    buttonRow.replaceChildren(button(S.respin, { variant: 'ghost', onClick: spin }), fight);
   }
 
   function onResize(): void {
@@ -216,14 +307,15 @@ export function createRouletteScene(ctx: SceneContext): Scene {
 
   return {
     mount(root) {
-      const banner = h('div', {
-        class: 'streak-banner',
-        text: gameState.winStreak > 0 ? streakLabel(gameState.winStreak) : S.rouletteTitle,
-      });
+      const title = isFinal
+        ? S.finalRouletteTitle
+        : gameState.winStreak > 0
+          ? streakLabel(gameState.winStreak)
+          : S.rouletteTitle;
 
       root.append(
         h('div', { class: 'scene' }, [
-          banner,
+          h('div', { class: 'streak-banner', text: title }),
           h('div', { class: 'wheel-wrap' }, [
             h('div', { class: 'wheel-box' }, [h('div', { class: 'wheel-pointer', text: '🔻' }), canvas]),
           ]),

@@ -14,6 +14,8 @@ export type SfxName =
   | 'step'
   | 'spinTick'
   | 'spinStop'
+  | 'warn'
+  | 'critical'
   | 'hitRock'
   | 'hitScissors'
   | 'hitPaper'
@@ -100,6 +102,17 @@ class AudioManager {
       case 'spinStop':
         this.tone({ freq: 660, duration: 0.1, type: 'square', gain: 0.14 });
         this.tone({ freq: 990, duration: 0.22, type: 'square', gain: 0.14, delay: 0.1 });
+        break;
+      case 'warn':
+        // 相性が悪い相手を引いたときの、不安げな下降2音
+        this.tone({ freq: 520, freqEnd: 380, duration: 0.22, type: 'triangle', gain: 0.16 });
+        this.tone({ freq: 390, freqEnd: 270, duration: 0.3, type: 'triangle', gain: 0.16, delay: 0.2 });
+        break;
+      case 'critical':
+        // 会心の一撃。通常の命中音よりはっきり派手にする
+        this.tone({ freq: 2400, freqEnd: 900, duration: 0.12, type: 'square', gain: 0.16 });
+        this.noise({ duration: 0.26, gain: 0.3, filter: 3600, delay: 0.05 });
+        this.tone({ freq: 150, freqEnd: 55, duration: 0.34, type: 'sine', gain: 0.34, delay: 0.05 });
         break;
       case 'hitRock':
         this.noise({ duration: 0.16, gain: 0.22, filter: 700 });

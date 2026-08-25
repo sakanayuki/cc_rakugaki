@@ -41,7 +41,16 @@ export interface CharacterDoc {
   /** オエカキの進行位置。4パーツ描き終わると 'done' */
   currentStep: PartId | 'done';
   updatedAt: string;
+  /**
+   * 殿堂入りでつけた名前。
+   * 第3版で足した「任意」フィールド。version は 1 のまま据え置いてあるので、
+   * これが無い古いセーブもそのまま読める。
+   */
+  name?: string;
 }
+
+/** 名前の最大文字数 */
+export const MAX_NAME_LENGTH = 10;
 
 export function createEmptyDoc(): CharacterDoc {
   return {

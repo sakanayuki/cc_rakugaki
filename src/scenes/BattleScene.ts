@@ -280,6 +280,9 @@ export function createBattleScene(ctx: SceneContext, params: SceneParamMap['batt
   }
 
   async function finish(winner: Side): Promise<void> {
+    // 相手が強敵なら、必殺技を使ったかどうかに関係なく強敵ボーナスになる
+    if (winner === 'player' && enemy.kind === 'strong') winKind = 'strong';
+
     const winnerRig = rigOf(winner);
     const loserRig = rigOf(winner === 'player' ? 'enemy' : 'player');
     void winnerRig?.play('win');

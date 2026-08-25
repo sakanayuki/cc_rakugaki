@@ -92,9 +92,21 @@ export const S = {
   championTitle: 'ゆうしょう！！',
   powerUpKo: 'ひっさつわざを つかわずに かった！ つよさ +20%',
   powerUpSpecial: 'ひっさつわざで かった！ つよさ +10%',
+  powerUpStrong: '👑 つよい あいてに かった！ つよさ +50%',
   nextBattle: '➡️ つぎの たたかいへ！',
   stopHere: '🏠 ここで やめる',
   toMenu: '🏠 メニューへ もどる',
+
+  // --- 殿堂入り ---
+  toHallOfFame: '👑 でんどういりへ！',
+  hallTitle: '👑 でんどういり！',
+  hallNamePrompt: 'なまえを つけてね',
+  hallNamePlaceholder: 'なまえ（10もじまで）',
+  defaultCharacterName: 'なまえなし',
+  hallSave: '📷 とっておく',
+  hallSaved: 'ほぞん できたよ！',
+  hallLongPress: 'ながおしして「がぞうを ほぞん」してね',
+  hallMaking: 'つくってるよ…',
 } as const;
 
 /** 属性の表示情報 */

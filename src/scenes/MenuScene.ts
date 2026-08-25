@@ -48,16 +48,21 @@ export function createMenuScene(ctx: SceneContext): Scene {
         },
       });
 
-      // セーブがあるときだけ、ボタンの横に小さく絵を出す
+      // セーブがあるときだけ、ボタンの横に小さく絵を出す。
+      // 殿堂入りで名前をつけていれば、その下に名前も添える
+      const savedName = savedDoc?.name;
       const continueRow = thumbnail
         ? h('div', { class: 'continue-row' }, [
-            h('div', { class: 'save-thumb' }, [
-              h('img', {
-                alt: S.menuContinue,
-                src: thumbnail.toDataURL(),
-                width: String(THUMBNAIL_SIZE),
-                height: String(THUMBNAIL_SIZE),
-              }),
+            h('div', { class: 'save-thumb-col' }, [
+              h('div', { class: 'save-thumb' }, [
+                h('img', {
+                  alt: savedName ?? S.menuContinue,
+                  src: thumbnail.toDataURL(),
+                  width: String(THUMBNAIL_SIZE),
+                  height: String(THUMBNAIL_SIZE),
+                }),
+              ]),
+              ...(savedName ? [h('span', { class: 'save-name', text: savedName })] : []),
             ]),
             continueButton,
           ])

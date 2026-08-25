@@ -1,9 +1,18 @@
 /**
- * 6画面を切り替える軽量なシーンマシン。
+ * 7画面を切り替える軽量なシーンマシン。
  * URLルーティングは使わない（GitHub Pages のサブパス配下で扱いが面倒になるため）。
  */
 
-export type SceneName = 'menu' | 'draw' | 'preview' | 'roulette' | 'battle' | 'result';
+import type { WinKind } from './GameState';
+
+export type SceneName =
+  | 'menu'
+  | 'draw'
+  | 'preview'
+  | 'roulette'
+  | 'battle'
+  | 'result'
+  | 'hall';
 
 export interface SceneParamMap {
   menu: void;
@@ -12,7 +21,9 @@ export interface SceneParamMap {
   preview: void;
   roulette: void;
   battle: { enemyId: string };
-  result: { outcome: 'win' | 'lose'; enemyId: string; winKind: 'ko' | 'special' };
+  result: { outcome: 'win' | 'lose'; enemyId: string; winKind: WinKind };
+  /** 殿堂入り。5連勝したときだけ入れる */
+  hall: void;
 }
 
 export interface SceneContext {

@@ -7,11 +7,18 @@ import { ALPHA_THRESHOLD } from './floodFill';
 import { createCanvas, PaintEngine } from './PaintEngine';
 import type { CharacterDoc } from './types';
 
+export interface ContentBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 /** 描かれている部分の外接矩形。何も描かれていなければ null */
 function contentBounds(
   data: Uint8ClampedArray,
   size: number,
-): { x: number; y: number; width: number; height: number } | null {
+): ContentBounds | null {
   let minX = Number.POSITIVE_INFINITY;
   let minY = Number.POSITIVE_INFINITY;
   let maxX = Number.NEGATIVE_INFINITY;
@@ -29,6 +36,11 @@ function contentBounds(
   }
   if (!Number.isFinite(minX)) return null;
   return { x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1 };
+}
+
+/** 展開済みの描画エンジンから、描かれている範囲の外接矩形を得る */
+export function contentBoundsOf(engine: PaintEngine): ContentBounds | null {
+  return contentBounds(engine.compositeData().data, engine.size);
 }
 
 /** 展開済みの描画エンジンから、キャラクター全体を収めた正方形サムネイルを作る */

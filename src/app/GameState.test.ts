@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { GROWTH_KO, GROWTH_SPECIAL, WIN_TARGET, gameState } from './GameState';
+import { GROWTH_KO, GROWTH_SPECIAL, GROWTH_STRONG, WIN_TARGET, gameState, growthFor } from './GameState';
 import type { Stats } from '../game/stats';
 
 const BASE: Stats = { maxHp: 100, atk: 20, spd: 10, element: 'rock' };
@@ -42,6 +42,24 @@ describe('成長ルール', () => {
     gameState.resetRun();
     for (let i = 0; i < 4; i++) gameState.registerWin('special');
     expect(gameState.growthRate).toBeCloseTo(1.4);
+  });
+
+  it('強敵に勝つと勝ち方に関係なく+50%', () => {
+    gameState.registerWin('strong');
+    expect(gameState.growthRate).toBeCloseTo(1 + GROWTH_STRONG);
+    expect(gameState.effectiveStats()).toEqual({ maxHp: 150, atk: 30, spd: 15, element: 'rock' });
+  });
+
+  it('強敵ボーナスはKO・必殺技のどちらより大きい', () => {
+    expect(growthFor('strong')).toBeGreaterThan(growthFor('ko'));
+    expect(growthFor('ko')).toBeGreaterThan(growthFor('special'));
+  });
+
+  it('強敵ボーナスも加算方式で他の勝ち方と足し合わせになる', () => {
+    gameState.registerWin('ko');
+    gameState.registerWin('strong');
+    gameState.registerWin('special');
+    expect(gameState.growthRate).toBeCloseTo(1 + GROWTH_KO + GROWTH_STRONG + GROWTH_SPECIAL);
   });
 
   it('属性は成長しても変わらない', () => {

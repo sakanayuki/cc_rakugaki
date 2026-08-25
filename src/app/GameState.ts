@@ -15,11 +15,22 @@ export const WIN_TARGET = 5;
 export const GROWTH_KO = 0.2;
 /** 必殺技で勝ったときの上乗せ */
 export const GROWTH_SPECIAL = 0.1;
+/** 強敵に勝ったときの上乗せ。勝ち方は問わない */
+export const GROWTH_STRONG = 0.5;
 /** 敵が1戦ごとに強くなる倍率 */
 export const ENEMY_SCALE_STEP = 1.1;
 
-/** 勝ち方。成長量が変わる */
-export type WinKind = 'ko' | 'special';
+/**
+ * 勝ち方。成長量が変わる。
+ * 相手が強敵なら、必殺技を使ったかどうかに関係なく 'strong' になる。
+ */
+export type WinKind = 'ko' | 'special' | 'strong';
+
+/** 勝ち方ごとの上乗せ量 */
+export function growthFor(kind: WinKind): number {
+  if (kind === 'strong') return GROWTH_STRONG;
+  return kind === 'ko' ? GROWTH_KO : GROWTH_SPECIAL;
+}
 
 class GameStateStore {
   doc: CharacterDoc | null = null;
@@ -80,7 +91,7 @@ class GameStateStore {
   registerWin(kind: WinKind): void {
     this.winStreak += 1;
     this.lastWinKind = kind;
-    this.growthRate += kind === 'ko' ? GROWTH_KO : GROWTH_SPECIAL;
+    this.growthRate += growthFor(kind);
   }
 
   get isChampion(): boolean {

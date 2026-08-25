@@ -1181,3 +1181,109 @@ body {
     transform: skewY(-4deg) translateX(100%);
   }
 }
+
+
+/* ============================================================
+   第3版で追加したもの
+   ============================================================ */
+
+/* ---------- リザルト: 強敵ボーナスの表示 ---------- */
+
+.hint-line.hint-gold {
+  /* 通常の +20%/+10% と同じ黄色だと差が伝わらないので、賞状と同じ金にする */
+  background: linear-gradient(180deg, #fff6c8 0%, #f6e27a 45%, #e8b93a 55%, #ffe98a 100%);
+  color: #4a3b12;
+  border: 3px solid #b8901c;
+  font-size: clamp(14px, 4vw, 19px);
+  font-weight: 900;
+  padding: 8px 16px;
+  box-shadow: 0 4px 0 rgba(184, 144, 28, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* ---------- 殿堂入り画面 ---------- */
+
+.photo-wrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 賞状の外側にも余白を見せて「写真」らしくする */
+  padding: 4px;
+}
+
+.photo-preview {
+  max-width: 100%;
+  max-height: 100%;
+  /* 記念写真は正方形。縦横どちらが詰まっても歪ませない */
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  border-radius: 12px;
+  background: var(--cream);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+  display: block;
+}
+
+.name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.name-label {
+  font-size: clamp(14px, 3.8vw, 18px);
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+}
+
+.name-input {
+  flex: 1 1 8em;
+  min-width: 0;
+  max-width: 14em;
+  font-family: inherit;
+  font-size: clamp(18px, 5vw, 26px);
+  font-weight: 900;
+  text-align: center;
+  color: var(--ink);
+  background: #fff;
+  border: 3px solid var(--orange);
+  border-radius: 14px;
+  padding: 8px 10px;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.12);
+}
+
+.name-input:focus {
+  outline: none;
+  border-color: var(--green-dark);
+  box-shadow: 0 0 0 4px rgba(67, 194, 107, 0.35);
+}
+
+/* ---------- メニュー: 保存した絵の名前 ---------- */
+
+.save-thumb-col {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.save-name {
+  /* 名前は最大10文字。1行に収まらないときは2行まで折り返す */
+  max-width: 96px;
+  font-size: 12px;
+  line-height: 1.15;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.28);
+  text-align: center;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow-wrap: anywhere;
+}

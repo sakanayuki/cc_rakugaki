@@ -1,7 +1,8 @@
 /**
  * 対戦リザルト画面。
- * 勝った場合は全ステータスが1.5倍になり、次の試合に進むかここでやめるかを選べる。
- * 5連勝で優勝。負けた場合はメインメニューに戻る。
+ * 勝った場合は勝ち方に応じて強くなり（3回以内のKOで+20%、必殺技で+10%、強敵なら+50%）、
+ * 次の試合に進むかここでやめるかを選べる。
+ * 5連勝で優勝し、殿堂入り画面へ進む。負けた場合はメインメニューに戻る。
  */
 
 import { audio } from '../app/audio';
@@ -77,7 +78,9 @@ export function createResultScene(ctx: SceneContext, params: SceneParamMap['resu
       return [button(S.toMenu, { variant: 'primary', size: 'huge', onClick: () => ctx.go('menu') })];
     }
     if (champion) {
-      return [button(S.toMenu, { variant: 'primary', size: 'huge', onClick: () => ctx.go('menu') })];
+      return [
+        button(S.toHallOfFame, { variant: 'primary', size: 'huge', onClick: () => ctx.go('hall') }),
+      ];
     }
     return [
       button(S.stopHere, { variant: 'ghost', onClick: () => ctx.go('menu') }),
@@ -100,8 +103,15 @@ export function createResultScene(ctx: SceneContext, params: SceneParamMap['resu
 
       const panel: HTMLElement[] = [];
       if (won && before && after) {
+        const strong = params.winKind === 'strong';
+        const growthText = strong
+          ? S.powerUpStrong
+          : params.winKind === 'ko'
+            ? S.powerUpKo
+            : S.powerUpSpecial;
         panel.push(
-          h('p', { class: 'hint-line', text: params.winKind === 'ko' ? S.powerUpKo : S.powerUpSpecial }),
+          // 強敵ボーナスは上乗せが大きいので、金色にして目立たせる
+          h('p', { class: strong ? 'hint-line hint-gold' : 'hint-line', text: growthText }),
           h('div', { class: 'stat-panel' }, [
             upgradeRow(S.statHp, before.maxHp, after.maxHp, 'maxHp'),
             upgradeRow(S.statAtk, before.atk, after.atk, 'atk'),

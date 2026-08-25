@@ -24,7 +24,9 @@ export type SfxName =
   | 'special'
   | 'win'
   | 'champion'
-  | 'lose';
+  | 'lose'
+  | 'hall'
+  | 'shutter';
 
 interface ToneOptions {
   freq: number;
@@ -149,6 +151,20 @@ class AudioManager {
         [523, 659, 784, 1047, 784, 1047, 1319].forEach((freq, i) => {
           this.tone({ freq, duration: 0.26, type: 'triangle', gain: 0.16, delay: i * 0.13 });
         });
+        break;
+      case 'hall':
+        // 殿堂入り。優勝より更に長く、荘厳に
+        [523, 659, 784, 1047, 1319, 1568].forEach((freq, i) => {
+          this.tone({ freq, duration: 0.32, type: 'triangle', gain: 0.15, delay: i * 0.16 });
+        });
+        [2093, 2637, 3136].forEach((freq, i) => {
+          this.tone({ freq, duration: 0.5, type: 'sine', gain: 0.07, delay: 1.0 + i * 0.12 });
+        });
+        break;
+      case 'shutter':
+        // カメラのシャッター
+        this.noise({ duration: 0.05, gain: 0.22, filter: 6000 });
+        this.tone({ freq: 2600, duration: 0.03, type: 'square', gain: 0.1, delay: 0.06 });
         break;
       case 'lose':
         [440, 349, 262].forEach((freq, i) => {

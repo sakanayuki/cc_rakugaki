@@ -1,10 +1,11 @@
-/** エントリポイント。6画面を登録してメインメニューから始める。 */
+/** エントリポイント。7画面を登録してメインメニューから始める。 */
 
 import './style.css';
 import { audio } from './app/audio';
 import { SceneManager } from './app/SceneManager';
 import { createBattleScene } from './scenes/BattleScene';
 import { createDrawScene } from './scenes/DrawScene';
+import { createHallOfFameScene } from './scenes/HallOfFameScene';
 import { createMenuScene } from './scenes/MenuScene';
 import { createPreviewScene } from './scenes/PreviewScene';
 import { createResultScene } from './scenes/ResultScene';
@@ -23,6 +24,7 @@ manager.register('preview', createPreviewScene);
 manager.register('roulette', createRouletteScene);
 manager.register('battle', createBattleScene);
 manager.register('result', createResultScene);
+manager.register('hall', createHallOfFameScene);
 
 // --- ミュート切り替え ---
 if (muteButton instanceof HTMLButtonElement) {

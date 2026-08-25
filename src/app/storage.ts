@@ -41,6 +41,8 @@ function isValidDoc(value: unknown): value is CharacterDoc {
   if (doc.version !== 1) return false;
   if (doc.canvasSize !== CANVAS_SIZE) return false;
   if (!Array.isArray(doc.ops) || !doc.ops.every(isValidOp)) return false;
+  // name は第3版で足した任意フィールド。無くても弾かない
+  if (doc.name !== undefined && typeof doc.name !== 'string') return false;
   return doc.currentStep === 'done' || isPartId(doc.currentStep);
 }
 

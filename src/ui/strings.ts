@@ -107,6 +107,58 @@ export const S = {
   hallSaved: 'ほぞん できたよ！',
   hallLongPress: 'ながおしして「がぞうを ほぞん」してね',
   hallMaking: 'つくってるよ…',
+
+  // --- オンラインたいせん ---
+  toOnline: '🌐 オンラインたいせん',
+  matchTitle: '🌐 おともだちと たいせん',
+  matchHost: '🔑 あいことばを つくる',
+  matchGuest: '⌨️ あいことばを いれる',
+  matchTellFriend: 'この あいことばを おともだちに おしえてね',
+  matchCopy: '📋 コピー',
+  matchCopied: 'コピーしたよ！',
+  matchCodeExpires: 'この がめんを とじると つかえなく なるよ',
+  matchEnterPrompt: 'きいた あいことばを いれてね',
+  matchConnect: 'つなぐ',
+  matchMaking: 'あいことばを つくってるよ…',
+  matchConnecting: 'つないでいるよ…',
+  matchExchanging: 'あいての えを もらっているよ…',
+  matchNotFound: 'その あいことばの おともだちが みつからないよ',
+  matchOffline: 'いま オンラインたいせんが つかえないみたい。あとで ためしてね',
+  matchNoWebrtc: 'この ブラウザでは オンラインたいせんが できないよ',
+  matchTimeout: 'つながらなかったよ。おなじ おうちの Wi-Fi で ためしてね',
+  matchLost: 'あいてと はなれちゃった',
+  matchBadDoc: 'あいての えが うまく よめなかったよ',
+  matchDesync: 'つうしんが おかしいよ',
+  matchReadyTitle: 'この あいてと たたかう？',
+  matchOk: '⚔️ これで OK！',
+  waitingOpponent: 'あいてを まってるよ…',
+
+  // --- 戦略画面 ---
+  strategyTitle: 'どの てで たたかう？',
+  strategyHint: 'えらんだ ては ジャンケンにも なるし こうげきの ちからにも なるよ',
+  strategyUnknown: 'あいての まもりは わからないよ',
+  strategyDecide: '⚔️ けってい！',
+  turnLabels: ['1かいめ', '2かいめ', '3かいめ'],
+
+  // --- オンライン戦闘 ---
+  jankenYouWin: 'きみの かち！ こうげき できる！',
+  jankenTheyWin: 'あいての かち！',
+  jankenDraw: 'あいこ！ どっちも こうげき！',
+  sideYou: 'きみ',
+  sideOpponent: 'あいて',
+
+  // --- オンラインリザルト ---
+  drawTitle: 'ひきわけ！',
+  drawSub: 'どっちも つよい！',
+  resultKoWin: 'あいてを たおした！',
+  resultKoLose: 'たおされちゃった…',
+  resultPointsWin: 'たいりょくが おおく のこったよ！',
+  resultPointsLose: 'たいりょくが すくなかった…',
+  oneShotWin: '⚡ 1かいで きめた！',
+  oneShotLose: '⚡ 1かいで やられちゃった…',
+  rematch: '🔄 もういちど たたかう',
+  quitOnline: '🏠 やめる',
+  opponentLeft: 'あいてが かえっちゃった',
 } as const;
 
 /** 属性の表示情報 */

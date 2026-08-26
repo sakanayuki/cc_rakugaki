@@ -149,6 +149,10 @@ export function createPreviewScene(ctx: SceneContext): Scene {
             button(S.toDraw, { variant: 'ghost', onClick: () => ctx.go('draw', { resume: true }) }),
             button(S.toBattle, { variant: 'primary', onClick: () => ctx.go('roulette') }),
           ]),
+          // オンライン対戦への唯一の入口。1人用と混ざらないよう段を分ける
+          h('div', { class: 'row row-center' }, [
+            button(S.toOnline, { variant: 'go', onClick: () => ctx.go('match') }),
+          ]),
         ]),
       );
 

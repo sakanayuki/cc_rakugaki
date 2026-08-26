@@ -12,7 +12,11 @@ export type SceneName =
   | 'roulette'
   | 'battle'
   | 'result'
-  | 'hall';
+  | 'hall'
+  | 'match'
+  | 'strategy'
+  | 'onlineBattle'
+  | 'onlineResult';
 
 export interface SceneParamMap {
   menu: void;
@@ -24,6 +28,14 @@ export interface SceneParamMap {
   result: { outcome: 'win' | 'lose'; enemyId: string; winKind: WinKind };
   /** 殿堂入り。5連勝したときだけ入れる */
   hall: void;
+
+  // --- オンラインたいせん ---
+  /** あいことばの交換と、おたがいの絵の確認 */
+  match: void;
+  /** 3ターンぶんのグーチョキパーを決める */
+  strategy: void;
+  onlineBattle: void;
+  onlineResult: void;
 }
 
 export interface SceneContext {

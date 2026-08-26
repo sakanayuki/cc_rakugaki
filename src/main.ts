@@ -1,4 +1,4 @@
-/** エントリポイント。7画面を登録してメインメニューから始める。 */
+/** エントリポイント。11画面を登録してメインメニューから始める。 */
 
 import './style.css';
 import { audio } from './app/audio';
@@ -6,10 +6,14 @@ import { SceneManager } from './app/SceneManager';
 import { createBattleScene } from './scenes/BattleScene';
 import { createDrawScene } from './scenes/DrawScene';
 import { createHallOfFameScene } from './scenes/HallOfFameScene';
+import { createMatchScene } from './scenes/MatchScene';
 import { createMenuScene } from './scenes/MenuScene';
+import { createOnlineBattleScene } from './scenes/OnlineBattleScene';
+import { createOnlineResultScene } from './scenes/OnlineResultScene';
 import { createPreviewScene } from './scenes/PreviewScene';
 import { createResultScene } from './scenes/ResultScene';
 import { createRouletteScene } from './scenes/RouletteScene';
+import { createStrategyScene } from './scenes/StrategyScene';
 import { button, h } from './ui/components';
 import { S } from './ui/strings';
 
@@ -25,6 +29,10 @@ manager.register('roulette', createRouletteScene);
 manager.register('battle', createBattleScene);
 manager.register('result', createResultScene);
 manager.register('hall', createHallOfFameScene);
+manager.register('match', createMatchScene);
+manager.register('strategy', createStrategyScene);
+manager.register('onlineBattle', createOnlineBattleScene);
+manager.register('onlineResult', createOnlineResultScene);
 
 // --- ミュート切り替え ---
 if (muteButton instanceof HTMLButtonElement) {

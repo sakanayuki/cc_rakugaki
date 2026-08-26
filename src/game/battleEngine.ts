@@ -165,51 +165,68 @@ export class Battle {
     ];
   }
 
-  /**
-   * 1回の攻撃を解決する。
-   * 乱数は 回避 → 防御 → 会心 → ゆらぎ の順に消費する（テストの再現性のため固定）。
-   */
+  /** 1回の攻撃を解決してHPに反映する。計算そのものは resolveAttack に任せる */
   private resolveAttack(actor: Side): Extract<BattleEvent, { type: 'attack' }> {
     const target: Side = actor === 'player' ? 'enemy' : 'player';
     const attacker = this.combatantOf(actor).stats;
     const defender = this.combatantOf(target).stats;
-    const elementMul = elementMultiplier(attacker.element, defender.element);
 
-    const dodgeRoll = this.rng.next() * 100;
-    if (dodgeRoll < dodgeChance(attacker.spd, defender.spd)) {
-      return {
-        type: 'attack',
-        actor,
-        target,
-        result: 'dodge',
-        damage: 0,
-        elementMul,
-        critical: false,
-        hpAfter: this.hpOf(target),
-      };
-    }
+    // PvEでは「絵から決まる属性」がそのまま攻撃属性になる
+    const outcome = resolveAttack(this.rng, attacker, defender, attacker.element, this.hpOf(target));
 
-    const guarded = this.rng.next() < GUARD_CHANCE;
-    const critical = this.rng.next() < CRIT_CHANCE;
-    const critMul = critical ? CRIT_MULTIPLIER : 1;
-    const variance = randRange(this.rng, DAMAGE_VARIANCE.min, DAMAGE_VARIANCE.max);
+    if (target === 'player') this.playerHp = outcome.hpAfter;
+    else this.enemyHp = outcome.hpAfter;
 
-    let damage = Math.max(1, Math.round(attacker.atk * elementMul * critMul * variance));
-    if (guarded) damage = Math.max(1, Math.ceil(damage / 2));
-
-    const hpAfter = Math.max(0, this.hpOf(target) - damage);
-    if (target === 'player') this.playerHp = hpAfter;
-    else this.enemyHp = hpAfter;
-
-    return {
-      type: 'attack',
-      actor,
-      target,
-      result: guarded ? 'guard' : 'hit',
-      damage,
-      elementMul,
-      critical,
-      hpAfter,
-    };
+    return { type: 'attack', actor, target, ...outcome };
   }
+}
+
+export interface AttackOutcome {
+  result: AttackResult;
+  damage: number;
+  elementMul: 0.5 | 1 | 2;
+  /** 会心の一撃だったか */
+  critical: boolean;
+  hpAfter: number;
+}
+
+/**
+ * 1回の攻撃を解決する。**PvEとオンライン対戦で共有する**。
+ *
+ * オンライン対戦は2台の端末が同じ計算をして同じ結果になることが前提なので、
+ * この式と乱数の消費順（回避 → 防御 → 会心 → ゆらぎ）を別の場所に書き写してはいけない。
+ * 片方だけ直すと「2台の画面で結果が違う」という再現しにくいバグになる。
+ *
+ * @param attackElement 攻撃側の属性。PvEは絵から決まる属性、オンラインは選んだ手
+ * @param defenderHp    守備側の現在HP。状態は持たないので呼び出し側が渡す
+ */
+export function resolveAttack(
+  rng: RNG,
+  attacker: Stats,
+  defender: Stats,
+  attackElement: Element,
+  defenderHp: number,
+): AttackOutcome {
+  const elementMul = elementMultiplier(attackElement, defender.element);
+
+  const dodgeRoll = rng.next() * 100;
+  if (dodgeRoll < dodgeChance(attacker.spd, defender.spd)) {
+    return { result: 'dodge', damage: 0, elementMul, critical: false, hpAfter: defenderHp };
+  }
+
+  const guarded = rng.next() < GUARD_CHANCE;
+  const critical = rng.next() < CRIT_CHANCE;
+  const critMul = critical ? CRIT_MULTIPLIER : 1;
+  const variance = randRange(rng, DAMAGE_VARIANCE.min, DAMAGE_VARIANCE.max);
+
+  let damage = Math.max(1, Math.round(attacker.atk * elementMul * critMul * variance));
+  if (guarded) damage = Math.max(1, Math.ceil(damage / 2));
+
+  return {
+    result: guarded ? 'guard' : 'hit',
+    damage,
+    elementMul,
+    critical,
+    hpAfter: Math.max(0, defenderHp - damage),
+  };
 }

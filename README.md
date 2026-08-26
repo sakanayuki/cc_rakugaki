@@ -124,8 +124,9 @@ npm run preview  # ビルド結果の確認
 - 接続先は `src/net/peerConfig.ts` の1か所にまとめてある。
   公開サーバーが止まったら、ここに `host` / `port` / `path` を足して
   自前の [PeerServer](https://github.com/peers/peerjs-server) に向ければ復旧できる
-- 直接つながらない回線どうしのための TURN 中継は用意していないため、
-  インターネット越しでは繋がらない組み合わせもある（同じWi-Fi内なら確実）
+- 直接つながらない回線どうしの中継（TURN）も、PeerJS の既定設定に無料のものが
+  含まれているのでそれに乗っている。**`peerConfig.ts` に `config`（iceServers）を
+  書くと、この既定値ごと消えて繋がらなくなる**ので触らないこと
 
 ## デプロイ
 

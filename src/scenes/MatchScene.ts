@@ -47,6 +47,8 @@ export function createMatchScene(ctx: SceneContext): Scene {
   const stage = getStage();
   const body = h('div', { class: 'grow match-body' });
   const notice = h('p', { class: 'hint-line hidden' });
+  /** つながらなかったとき、どこで止まったかを小さく出す（報告してもらう用） */
+  const detailLine = h('p', { class: 'match-note hidden' });
   const stageHost = h('div', { class: 'stage3d' });
 
   let phase: Phase = 'role';
@@ -63,13 +65,19 @@ export function createMatchScene(ctx: SceneContext): Scene {
     return { mount() {}, unmount() {} };
   }
 
+  let lastDetail: string | null = null;
+
   function showNotice(text: string): void {
     notice.textContent = text;
     notice.classList.remove('hidden');
+    detailLine.textContent = lastDetail ?? '';
+    detailLine.classList.toggle('hidden', !lastDetail);
   }
 
   function clearNotice(): void {
     notice.classList.add('hidden');
+    detailLine.classList.add('hidden');
+    lastDetail = null;
   }
 
   /** 接続を捨ててメインメニューへ。オンライン状態も片づける */
@@ -168,18 +176,36 @@ export function createMatchScene(ctx: SceneContext): Scene {
         autocomplete: 'off',
         'aria-label': `${i + 1}もじめ`,
       });
+      /** i番目のマスから順に文字を撒く */
+      const spread = (text: string): void => {
+        const typed = normalizeRoomCode(text);
+        if (!typed) return;
+        [...typed].forEach((char, offset) => {
+          if (inputs[i + offset]) inputs[i + offset].value = char;
+        });
+        inputs[Math.min(i + typed.length, CODE_LENGTH - 1)].focus();
+        sync();
+      };
+
+      // 貼り付けは paste で受ける。
+      // maxlength="1" が効いてブラウザが1文字に切り詰めてしまうため、
+      // input イベントまで待つと6文字のうち1文字しか手に入らない
+      cell.addEventListener('paste', (event) => {
+        const text = event.clipboardData?.getData('text');
+        if (!text) return;
+        event.preventDefault();
+        spread(text);
+      });
+
       cell.addEventListener('input', () => {
-        // 貼り付けられたら、まとめて各マスに撒く
+        // 1文字ずつ打たれた場合。IMEなどで複数入ってきたときも撒く
         const typed = normalizeRoomCode(cell.value);
         if (typed.length > 1) {
-          [...typed].forEach((char, offset) => {
-            if (inputs[i + offset]) inputs[i + offset].value = char;
-          });
-          inputs[Math.min(i + typed.length, CODE_LENGTH - 1)].focus();
-        } else {
-          cell.value = typed;
-          if (typed && inputs[i + 1]) inputs[i + 1].focus();
+          spread(typed);
+          return;
         }
+        cell.value = typed;
+        if (typed && inputs[i + 1]) inputs[i + 1].focus();
         sync();
       });
       cell.addEventListener('keydown', (event) => {
@@ -299,6 +325,7 @@ export function createMatchScene(ctx: SceneContext): Scene {
     });
     created.on('error', (error) => {
       if (disposed) return;
+      lastDetail = error.detail ?? null;
       if (phase === 'preview' || phase === 'exchanging') bail(messageFor(error.kind));
       else {
         showNotice(messageFor(error.kind));
@@ -423,6 +450,7 @@ export function createMatchScene(ctx: SceneContext): Scene {
           h('h2', { class: 'draw-title', text: S.matchTitle }),
           body,
           notice,
+          detailLine,
           h('div', { class: 'row row-center' }, [
             button(S.back, {
               variant: 'ghost',

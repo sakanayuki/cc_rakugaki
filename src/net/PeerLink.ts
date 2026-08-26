@@ -35,7 +35,15 @@ export type LinkErrorKind =
   | 'bye';
 
 export class LinkError extends Error {
-  constructor(readonly kind: LinkErrorKind, message: string) {
+  /**
+   * @param detail つながらなかったときに、どこで止まったのかを示す短い印。
+   *   画面のすみに小さく出して、うまくいかない環境を報告してもらうために使う。
+   */
+  constructor(
+    readonly kind: LinkErrorKind,
+    message: string,
+    readonly detail?: string,
+  ) {
     super(message);
     this.name = 'LinkError';
   }
@@ -214,7 +222,7 @@ export class PeerLink {
     // 直接つながらない回線だと open がいつまでも来ないので見張る
     this.connectTimer = window.setTimeout(() => {
       if (this.currentState !== 'open') {
-        this.emitError(new LinkError('lost', '時間内につながらなかった'));
+        this.emitError(new LinkError('lost', '時間内につながらなかった', this.iceDetail()));
         this.close();
       }
     }, CONNECT_TIMEOUT_MS);
@@ -250,6 +258,17 @@ export class PeerLink {
     conn.on('error', (error) => {
       this.emitError(new LinkError('lost', String(error)));
     });
+  }
+
+  /**
+   * どこで止まったのかを short code にする。
+   * ICEが `failed` なら経路が見つからなかった（TURNが要る回線）、
+   * `checking` のままなら候補は集まったが疎通しなかった、という区別がつく。
+   */
+  private iceDetail(): string {
+    const pc = this.conn?.peerConnection;
+    if (!pc) return 'ice:none';
+    return `ice:${pc.iceConnectionState}/${pc.connectionState}`;
   }
 
   /**

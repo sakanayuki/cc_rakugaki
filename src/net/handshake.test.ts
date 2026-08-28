@@ -18,7 +18,14 @@ import { decodeDoc, encodeDoc } from './codec';
 import { commitHashOf, createReveal, mixSeed, verifyReveal } from './fairness';
 import type { Reveal } from './fairness';
 import type { NetMessage } from './protocol';
-import { PROTOCOL_VERSION, parseMessage, revealOf, sanitizeIncomingDoc } from './protocol';
+import {
+  PROTOCOL_VERSION,
+  joinChunks,
+  parseMessage,
+  revealOf,
+  sanitizeIncomingDoc,
+  splitIntoChunks,
+} from './protocol';
 
 /**
  * 1台ぶんの端末。
@@ -33,6 +40,7 @@ class FakePeer {
   opponentCommit: string | null = null;
   opponentReveal: Reveal | null = null;
   events: PvpEvent[] | null = null;
+  incoming: { chunks: (string | undefined)[]; expected: number } | null = null;
 
   constructor(
     readonly side: PvpSide,
@@ -44,8 +52,12 @@ class FakePeer {
     this.outbox.push(message);
   }
 
+  /** 実物と同じく、分割して送る */
   async sendHello(): Promise<void> {
-    this.send({ type: 'hello', v: PROTOCOL_VERSION, doc: await encodeDoc(this.doc) });
+    const encoded = await encodeDoc(this.doc);
+    const chunks = splitIntoChunks(encoded);
+    this.send({ type: 'hello', v: PROTOCOL_VERSION, size: encoded.length, chunks: chunks.length });
+    chunks.forEach((data, i) => this.send({ type: 'chunk', i, data }));
   }
 
   async decide(choices: Element[]): Promise<void> {
@@ -60,8 +72,16 @@ class FakePeer {
     if (!message) throw new Error('検査を通らないメッセージ');
 
     switch (message.type) {
-      case 'hello': {
-        const decoded = await decodeDoc(message.doc);
+      case 'hello':
+        this.incoming = { chunks: new Array<string | undefined>(message.chunks), expected: message.chunks };
+        break;
+      case 'chunk': {
+        if (!this.incoming) break;
+        this.incoming.chunks[message.i] = message.data;
+        const encoded = joinChunks(this.incoming.chunks, this.incoming.expected);
+        if (encoded === null) break;
+        this.incoming = null;
+        const decoded = await decodeDoc(encoded);
         const clean = sanitizeIncomingDoc(decoded);
         if (!clean) throw new Error('あいての絵を認められない');
         // ステータスは送ってもらわない。絵から自分で出す

@@ -15,7 +15,14 @@ import { decodeDoc } from '../net/codec';
 import type { LinkErrorKind } from '../net/PeerLink';
 import { PeerLink } from '../net/PeerLink';
 import type { NetMessage } from '../net/protocol';
-import { PROTOCOL_VERSION, sanitizeIncomingDoc, stripNameForSending } from '../net/protocol';
+import {
+  PROTOCOL_VERSION,
+  joinChunks,
+  sanitizeIncomingDoc,
+  splitIntoChunks,
+  stripNameForSending,
+} from '../net/protocol';
+import { netLog, netLogLines, onNetLog } from '../net/netLog';
 import { encodeDoc } from '../net/codec';
 import { CODE_LENGTH, isValidRoomCode, normalizeRoomCode } from '../net/roomCode';
 import { buildCharacter } from '../rig/rigBuilder';
@@ -49,6 +56,17 @@ export function createMatchScene(ctx: SceneContext): Scene {
   const notice = h('p', { class: 'hint-line hidden' });
   /** つながらなかったとき、どこで止まったかを小さく出す（報告してもらう用） */
   const detailLine = h('p', { class: 'match-note diag hidden' });
+  /** 実機で不具合を追うための通信ログ。スマホではコンソールが見られないため */
+  const logBox = h('pre', { class: 'netlog' });
+  const logToggle = button('🔧 ログ', {
+    variant: 'ghost',
+    size: 'small',
+    onClick: () => {
+      const shown = logBox.classList.toggle('on');
+      logToggle.textContent = shown ? '🔧 ログを とじる' : '🔧 ログ';
+    },
+  });
+  let stopLog: (() => void) | null = null;
   const stageHost = h('div', { class: 'stage3d' });
 
   let phase: Phase = 'role';
@@ -57,6 +75,8 @@ export function createMatchScene(ctx: SceneContext): Scene {
   let iAmReady = false;
   let opponentReady = false;
   let helloSent = false;
+  /** 相手から届いた絵のかたまり。hello で数を受け取ってから埋めていく */
+  let incoming: { chunks: (string | undefined)[]; expected: number } | null = null;
 
   const doc = gameState.doc;
   if (!doc || !gameState.analysis) {
@@ -70,6 +90,9 @@ export function createMatchScene(ctx: SceneContext): Scene {
   function showNotice(text: string): void {
     notice.textContent = text;
     notice.classList.remove('hidden');
+    // つまずいたら黙っていても見えるように開く
+    logBox.classList.add('on');
+    logToggle.textContent = '🔧 ログを とじる';
     detailLine.textContent = lastDetail ?? '';
     detailLine.classList.toggle('hidden', !lastDetail);
     detailLine.classList.add('diag');
@@ -389,15 +412,26 @@ export function createMatchScene(ctx: SceneContext): Scene {
     }
   }
 
-  /** つながったら自分の絵を送る。名前は落として送る */
+  /**
+   * つながったら自分の絵を送る。名前は落として送る。
+   *
+   * **必ず分割して送ること。** 1メッセージの上限は端末によって違い、
+   * 64KBしかない端末もある。指で描いた絵はそれを超えることがあり、
+   * まとめて送ると送信側で失敗して「相手にだけ絵が届かない」状態になる。
+   */
   async function sendHello(): Promise<void> {
     if (helloSent || disposed || !doc) return;
     helloSent = true;
     phase = 'exchanging';
     render();
+
     const encoded = await encodeDoc(stripNameForSending(doc));
     if (disposed) return;
-    link?.send({ type: 'hello', v: PROTOCOL_VERSION, doc: encoded });
+    const chunks = splitIntoChunks(encoded);
+    netLog(`自分の絵: ${encoded.length}文字 → ${chunks.length}こに分割`);
+
+    link?.send({ type: 'hello', v: PROTOCOL_VERSION, size: encoded.length, chunks: chunks.length });
+    chunks.forEach((data, i) => link?.send({ type: 'chunk', i, data }));
   }
 
   async function onMessage(message: NetMessage): Promise<void> {
@@ -405,14 +439,32 @@ export function createMatchScene(ctx: SceneContext): Scene {
     switch (message.type) {
       case 'hello': {
         if (message.v !== PROTOCOL_VERSION) return bail(S.matchOffline);
+        netLog(`あいての絵: ${message.size}文字 / ${message.chunks}こ を待つ`);
+        incoming = { chunks: new Array<string | undefined>(message.chunks), expected: message.chunks };
+        break;
+      }
+      case 'chunk': {
+        if (!incoming) return; // hello より先に来たものは捨てる
+        if (message.i >= incoming.expected) return;
+        incoming.chunks[message.i] = message.data;
+
+        const encoded = joinChunks(incoming.chunks, incoming.expected);
+        if (encoded === null) return; // まだ穴がある
+        netLog(`あいての絵がそろった（${encoded.length}文字）`);
+        incoming = null;
+
         let decoded: unknown;
         try {
-          decoded = await decodeDoc(message.doc);
-        } catch {
+          decoded = await decodeDoc(encoded);
+        } catch (error) {
+          netLog(`decode 失敗: ${String(error)}`);
           return bail(S.matchBadDoc);
         }
         const clean = sanitizeIncomingDoc(decoded);
-        if (!clean) return bail(S.matchBadDoc);
+        if (!clean) {
+          netLog('あいての絵が上限を超えていた');
+          return bail(S.matchBadDoc);
+        }
         if (disposed) return;
         onlineState.opponent = fighterFromDoc(clean);
         if (!onlineState.me) onlineState.me = fighterFromDoc(doc!);
@@ -452,7 +504,9 @@ export function createMatchScene(ctx: SceneContext): Scene {
           body,
           notice,
           detailLine,
+          logBox,
           h('div', { class: 'row row-center' }, [
+            logToggle,
             button(S.back, {
               variant: 'ghost',
               onClick: () => {
@@ -464,11 +518,20 @@ export function createMatchScene(ctx: SceneContext): Scene {
           ]),
         ]),
       );
+      // ログは購読して流し込む。エラーのときは自動で開く
+      logBox.textContent = netLogLines().join('\n');
+      stopLog = onNetLog((lines) => {
+        logBox.textContent = lines.join('\n');
+        logBox.scrollTop = logBox.scrollHeight;
+      });
+
       render();
     },
 
     unmount() {
       disposed = true;
+      stopLog?.();
+      stopLog = null;
       teardownStage();
     },
   };

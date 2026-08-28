@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { LIMITS, parseMessage, revealOf, sanitizeIncomingDoc, stripNameForSending } from './protocol';
+import {
+  CHUNK_CHARS,
+  LIMITS,
+  MAX_CHUNKS,
+  joinChunks,
+  parseMessage,
+  revealOf,
+  sanitizeIncomingDoc,
+  splitIntoChunks,
+  stripNameForSending,
+} from './protocol';
 import { CANVAS_SIZE, createEmptyDoc } from '../paint/types';
 import type { CharacterDoc, DrawOp } from '../paint/types';
 
@@ -13,8 +23,11 @@ function docWith(ops: DrawOp[]): unknown {
 
 describe('メッセージの検査', () => {
   it('正しいものは通る', () => {
-    expect(parseMessage({ type: 'hello', v: 1, doc: 'g1:xx' })).toEqual({
-      type: 'hello', v: 1, doc: 'g1:xx',
+    expect(parseMessage({ type: 'hello', v: 1, size: 12, chunks: 2 })).toEqual({
+      type: 'hello', v: 1, size: 12, chunks: 2,
+    });
+    expect(parseMessage({ type: 'chunk', i: 0, data: 'abc' })).toEqual({
+      type: 'chunk', i: 0, data: 'abc',
     });
     expect(parseMessage({ type: 'ready' })).toEqual({ type: 'ready' });
     expect(parseMessage({ type: 'bye' })).toEqual({ type: 'bye' });
@@ -30,7 +43,12 @@ describe('メッセージの検査', () => {
 
   it('形が違うものは弾く', () => {
     expect(parseMessage({ type: 'hello', v: 1 })).toBeNull();
-    expect(parseMessage({ type: 'hello', v: '1', doc: 'x' })).toBeNull();
+    expect(parseMessage({ type: 'hello', v: '1', size: 1, chunks: 1 })).toBeNull();
+    // かたまりの数が多すぎるものは弾く
+    expect(parseMessage({ type: 'hello', v: 1, size: 1, chunks: MAX_CHUNKS + 1 })).toBeNull();
+    expect(parseMessage({ type: 'chunk', i: -1, data: 'a' })).toBeNull();
+    expect(parseMessage({ type: 'chunk', i: MAX_CHUNKS, data: 'a' })).toBeNull();
+    expect(parseMessage({ type: 'chunk', i: 0, data: 'a'.repeat(CHUNK_CHARS * 2 + 1) })).toBeNull();
     expect(parseMessage({ type: 'commit', round: 0 })).toBeNull();
     expect(parseMessage({ type: 'ping', t: Number.NaN })).toBeNull();
   });
@@ -141,5 +159,42 @@ describe('送る前の名前落とし', () => {
     const doc: CharacterDoc = { ...createEmptyDoc(), name: 'ぽちまる' };
     stripNameForSending(doc);
     expect(doc.name).toBe('ぽちまる');
+  });
+});
+
+describe('絵の分割と組み立て', () => {
+  it('分けて繋ぐと元に戻る', () => {
+    const text = 'g1:' + 'x'.repeat(CHUNK_CHARS * 3 + 17);
+    const chunks = splitIntoChunks(text);
+    expect(chunks.length).toBe(4);
+    expect(joinChunks(chunks, chunks.length)).toBe(text);
+  });
+
+  it('1メッセージの上限を超えない大きさに割れる', () => {
+    for (const chunk of splitIntoChunks('y'.repeat(100_000))) {
+      expect(chunk.length).toBeLessThanOrEqual(CHUNK_CHARS);
+    }
+  });
+
+  it('短いものは1つにまとまる', () => {
+    expect(splitIntoChunks('abc')).toEqual(['abc']);
+  });
+
+  it('穴があるうちは組み立てない', () => {
+    const parts: (string | undefined)[] = ['a', undefined, 'c'];
+    expect(joinChunks(parts, 3)).toBeNull();
+  });
+
+  it('数が合わなければ組み立てない', () => {
+    expect(joinChunks(['a', 'b'], 3)).toBeNull();
+  });
+
+  it('順番がばらばらに届いても、そろえば元に戻る', () => {
+    const text = 'z'.repeat(CHUNK_CHARS * 2 + 5);
+    const chunks = splitIntoChunks(text);
+    const box: (string | undefined)[] = new Array(chunks.length);
+    // わざと逆順に入れる
+    for (let i = chunks.length - 1; i >= 0; i--) box[i] = chunks[i];
+    expect(joinChunks(box, chunks.length)).toBe(text);
   });
 });

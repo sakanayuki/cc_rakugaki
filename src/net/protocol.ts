@@ -24,8 +24,22 @@ export const LIMITS = {
   maxWidth: 64,
 } as const;
 
+/**
+ * 絵を分割して送るときの1かたまりの大きさ（base64の文字数）。
+ *
+ * データチャネルの1メッセージ上限は機種によって違い、**64KBしかない端末もある**。
+ * 指で描いた絵は点が多く、gzip+base64でもそれを超えることがあるので、
+ * 必ずこの大きさに割って送る。1メッセージで送ろうとすると、
+ * 送信側で黙って失敗して「相手にだけ絵が届かない」状態になる。
+ */
+export const CHUNK_CHARS = 8000;
+
+/** 受け取ってよい かたまりの数の上限（= 約1.6MBぶん） */
+export const MAX_CHUNKS = 200;
+
 export type NetMessage =
-  | { type: 'hello'; v: number; doc: string }
+  | { type: 'hello'; v: number; size: number; chunks: number }
+  | { type: 'chunk'; i: number; data: string }
   | { type: 'ready' }
   | { type: 'commit'; round: number; hash: string }
   | { type: 'reveal'; round: number; choices: Element[]; salt: string; nonce: number }
@@ -48,8 +62,20 @@ export function parseMessage(raw: unknown): NetMessage | null {
   if (!isObject(raw)) return null;
   switch (raw.type) {
     case 'hello':
-      return isFiniteNumber(raw.v) && typeof raw.doc === 'string'
-        ? { type: 'hello', v: raw.v, doc: raw.doc }
+      return isFiniteNumber(raw.v) &&
+        isFiniteNumber(raw.size) &&
+        isFiniteNumber(raw.chunks) &&
+        raw.chunks >= 0 &&
+        raw.chunks <= MAX_CHUNKS
+        ? { type: 'hello', v: raw.v, size: raw.size, chunks: raw.chunks }
+        : null;
+    case 'chunk':
+      return isFiniteNumber(raw.i) &&
+        raw.i >= 0 &&
+        raw.i < MAX_CHUNKS &&
+        typeof raw.data === 'string' &&
+        raw.data.length <= CHUNK_CHARS * 2
+        ? { type: 'chunk', i: raw.i, data: raw.data }
         : null;
     case 'ready':
       return { type: 'ready' };
@@ -158,4 +184,23 @@ export function sanitizeIncomingDoc(value: unknown): CharacterDoc | null {
 export function stripNameForSending(doc: CharacterDoc): CharacterDoc {
   const { name: _name, ...rest } = doc;
   return rest;
+}
+
+/** 送るために、符号化した絵を決まった大きさに割る */
+export function splitIntoChunks(encoded: string): string[] {
+  const chunks: string[] = [];
+  for (let i = 0; i < encoded.length; i += CHUNK_CHARS) {
+    chunks.push(encoded.slice(i, i + CHUNK_CHARS));
+  }
+  return chunks;
+}
+
+/**
+ * 受け取ったかたまりを組み立てる。
+ * 数が合っていて穴が無いときだけ文字列を返す。
+ */
+export function joinChunks(parts: (string | undefined)[], expected: number): string | null {
+  if (parts.length !== expected) return null;
+  for (const part of parts) if (typeof part !== 'string') return null;
+  return parts.join('');
 }

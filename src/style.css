@@ -1603,3 +1603,27 @@ body {
   color: var(--green-dark);
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------- 実機デバッグ用の通信ログ ---------- */
+
+.netlog {
+  display: none;
+  margin: 0;
+  max-height: 34vh;
+  overflow: auto;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(20, 24, 20, 0.88);
+  color: #d8f5c8;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: all;
+  -webkit-user-select: all;
+}
+
+.netlog.on {
+  display: block;
+}

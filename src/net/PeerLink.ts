@@ -18,6 +18,7 @@ import {
   PING_INTERVAL_MS,
   PING_TIMEOUT_MS,
 } from './peerConfig';
+import { netLog } from './netLog';
 import { makeRoomCode, peerIdFor } from './roomCode';
 
 export type LinkState = 'idle' | 'waiting' | 'connecting' | 'open' | 'closed';
@@ -134,11 +135,13 @@ export class PeerLink {
 
   private emitState(state: LinkState): void {
     if (this.currentState === state) return;
+    netLog(`state: ${this.currentState} -> ${state}`);
     this.currentState = state;
     for (const handler of this.handlers.state) handler(state);
   }
 
   private emitError(error: LinkError): void {
+    netLog(`ERROR ${error.kind}: ${error.message}${error.detail ? ` [${error.detail}]` : ''}`);
     for (const handler of this.handlers.error) handler(error);
   }
 
@@ -267,6 +270,7 @@ export class PeerLink {
       }
       if (message.type === 'pong') return;
 
+      netLog(`recv ${message.type}${message.type === 'chunk' ? ` #${message.i} (${message.data.length})` : ''}`);
       for (const handler of this.handlers.message) handler(message);
     });
 
@@ -295,6 +299,11 @@ export class PeerLink {
         else if (type === 'srflx') this.found.srflx += 1;
         else if (type === 'relay') this.found.relay += 1;
       });
+      pc.addEventListener('iceconnectionstatechange', () => {
+        netLog(`ice: ${pc.iceConnectionState} (h${this.found.host} s${this.found.srflx} r${this.found.relay})`);
+      });
+      // 1メッセージで送れる大きさは端末によって違う。分割の判断材料として残す
+      netLog(`maxMessageSize: ${pc.sctp?.maxMessageSize ?? 'unknown'}`);
       return true;
     };
     if (hook()) return;
@@ -339,7 +348,22 @@ export class PeerLink {
   }
 
   send(message: NetMessage): void {
-    if (this.conn?.open) this.conn.send(message);
+    const conn = this.conn;
+    if (!conn?.open) {
+      netLog(`send ${message.type} を捨てた（まだ open ではない）`);
+      return;
+    }
+    try {
+      conn.send(message);
+      if (message.type !== 'ping' && message.type !== 'pong') {
+        netLog(`sent ${message.type}${message.type === 'chunk' ? ` #${message.i}` : ''}`);
+      }
+    } catch (error) {
+      // 大きすぎるメッセージはここで落ちる。黙って消えると
+      // 「相手にだけ絵が届かない」という追いにくい不具合になる
+      netLog(`SEND FAILED ${message.type}: ${String(error)}`);
+      this.emitError(new LinkError('lost', `送信に失敗した: ${String(error)}`));
+    }
   }
 
   /**

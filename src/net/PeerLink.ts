@@ -12,6 +12,7 @@ import type { NetMessage } from './protocol';
 import { parseMessage } from './protocol';
 import {
   CONNECT_TIMEOUT_MS,
+  EXTRA_ICE_SERVERS,
   ID_RETRY_LIMIT,
   PEER_OPTIONS,
   PING_INTERVAL_MS,
@@ -81,6 +82,8 @@ export class PeerLink {
   private currentState: LinkState = 'idle';
   private connectTimer = 0;
   private pingTimer = 0;
+  /** 集まった経路候補の数。relay が 0 なら TURN中継に届いていない */
+  private readonly found = { host: 0, srflx: 0, relay: 0 };
   private lastHeard = 0;
   private disposed = false;
   private readonly handlers: Handlers = {
@@ -94,12 +97,28 @@ export class PeerLink {
   /** 画面に出す6文字。ホストのときだけ入る */
   roomCode: string | null = null;
 
-  private constructor(private readonly PeerCtor: new (id: string, options?: PeerOptions) => Peer) {}
+  private constructor(
+    private readonly PeerCtor: new (id: string, options?: PeerOptions) => Peer,
+    private readonly options: PeerOptions,
+  ) {}
 
   /** peerjs はここで初めて読み込まれる */
   static async create(): Promise<PeerLink> {
-    const { Peer } = await import('peerjs');
-    return new PeerLink(Peer as unknown as new (id: string, options?: PeerOptions) => Peer);
+    const { Peer, util } = await import('peerjs');
+
+    // 既定の iceServers（STUNとPeerJSのTURN）を**消さずに**、予備の中継先を足す。
+    // config を丸ごと渡すと既定値が消えるので、必ずここで繋ぎ合わせること
+    const options: PeerOptions = {
+      ...PEER_OPTIONS,
+      config: {
+        ...util.defaultConfig,
+        iceServers: [...(util.defaultConfig.iceServers ?? []), ...EXTRA_ICE_SERVERS],
+      },
+    };
+    return new PeerLink(
+      Peer as unknown as new (id: string, options?: PeerOptions) => Peer,
+      options,
+    );
   }
 
   get state(): LinkState {
@@ -148,7 +167,7 @@ export class PeerLink {
    */
   private openPeer(code: string): Promise<boolean> {
     return new Promise((resolve, reject) => {
-      const peer = new this.PeerCtor(peerIdFor(code), PEER_OPTIONS as PeerOptions);
+      const peer = new this.PeerCtor(peerIdFor(code), this.options);
       this.peer = peer;
 
       const onOpen = () => {
@@ -195,7 +214,7 @@ export class PeerLink {
     this.emitState('connecting');
 
     // ゲスト自身のIDは何でもよいので PeerJS に決めてもらう
-    const peer = new this.PeerCtor(undefined as unknown as string, PEER_OPTIONS as PeerOptions);
+    const peer = new this.PeerCtor(undefined as unknown as string, this.options);
     this.peer = peer;
 
     await new Promise<void>((resolve, reject) => {
@@ -226,6 +245,8 @@ export class PeerLink {
         this.close();
       }
     }, CONNECT_TIMEOUT_MS);
+
+    this.watchCandidates();
 
     conn.on('open', () => {
       window.clearTimeout(this.connectTimer);
@@ -261,14 +282,41 @@ export class PeerLink {
   }
 
   /**
+   * 集まった経路候補を種類ごとに数える。
+   * PeerJS が RTCPeerConnection を作るのは少しあとなので、出てくるまで待って繋ぐ。
+   */
+  private watchCandidates(): void {
+    const hook = (): boolean => {
+      const pc = this.conn?.peerConnection;
+      if (!pc) return false;
+      pc.addEventListener('icecandidate', (event) => {
+        const type = event.candidate?.type;
+        if (type === 'host') this.found.host += 1;
+        else if (type === 'srflx') this.found.srflx += 1;
+        else if (type === 'relay') this.found.relay += 1;
+      });
+      return true;
+    };
+    if (hook()) return;
+    let tries = 0;
+    const timer = window.setInterval(() => {
+      if (hook() || (tries += 1) > 60) window.clearInterval(timer);
+    }, 50);
+  }
+
+  /**
    * どこで止まったのかを short code にする。
-   * ICEが `failed` なら経路が見つからなかった（TURNが要る回線）、
-   * `checking` のままなら候補は集まったが疎通しなかった、という区別がつく。
+   *
+   * - `h` = 自分のLAN内の住所、`s` = 外から見える住所（STUN）、`r` = 中継（TURN）
+   * - **`r0` なら TURN中継に届いていない**ので、中継先を変える必要がある
+   * - ICEが `failed` なら経路が見つからなかった、
+   *   `checking` のままなら候補は集まったが疎通しなかった、という区別がつく
    */
   private iceDetail(): string {
     const pc = this.conn?.peerConnection;
-    if (!pc) return 'ice:none';
-    return `ice:${pc.iceConnectionState}/${pc.connectionState}`;
+    const counts = `h${this.found.host} s${this.found.srflx} r${this.found.relay}`;
+    if (!pc) return `ice:none ${counts}`;
+    return `ice:${pc.iceConnectionState}/${pc.connectionState} ${counts}`;
   }
 
   /**

@@ -48,7 +48,7 @@ export function createMatchScene(ctx: SceneContext): Scene {
   const body = h('div', { class: 'grow match-body' });
   const notice = h('p', { class: 'hint-line hidden' });
   /** つながらなかったとき、どこで止まったかを小さく出す（報告してもらう用） */
-  const detailLine = h('p', { class: 'match-note hidden' });
+  const detailLine = h('p', { class: 'match-note diag hidden' });
   const stageHost = h('div', { class: 'stage3d' });
 
   let phase: Phase = 'role';
@@ -72,6 +72,7 @@ export function createMatchScene(ctx: SceneContext): Scene {
     notice.classList.remove('hidden');
     detailLine.textContent = lastDetail ?? '';
     detailLine.classList.toggle('hidden', !lastDetail);
+    detailLine.classList.add('diag');
   }
 
   function clearNotice(): void {

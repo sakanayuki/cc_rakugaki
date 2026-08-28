@@ -1,5 +1,5 @@
 /**
- * ブローカーの接続先。
+ * ブローカーの接続先と、経路さがし（ICE）の設定。
  *
  * **差し替えるのはこのファイルだけで済むようにしてある。**
  * PeerJS の無料公開サーバーが止まったら、ここに host/port/path を書き足して
@@ -19,22 +19,49 @@ export const PING_TIMEOUT_MS = 15_000;
 /**
  * host / port / path を省略すると PeerJS の公開クラウド（0.peerjs.com:443）に繋がる。
  *
- * **`config`（iceServers）は絶対に書かないこと。**
- * PeerJS の既定値には Google の STUN だけでなく、
- * `turn:eu-0.turn.peerjs.com` / `turn:us-0.turn.peerjs.com` という
- * **無料のTURN中継**も入っている。TURNは「直接つながらない回線どうしを
- * 中継してくれる係」で、これが無いと次の場合に接続できない。
- *
- * - 同じWi-Fiでも、ルーターが端末どうしの通信を遮っている（AP分離など）
- * - 携帯回線や一部のプロバイダ（相手から見える穴が毎回変わるタイプのNAT）
- *
- * そして PeerJS は `config` を**浅く上書き**する（マージしない）ので、
- * ここに `{ iceServers: [...STUNだけ] }` と書くと**TURNが消える**。
- * 実際それで「つながらなかったよ」が出る不具合を出したので、既定値に任せる。
- *
- * 自前のTURNを足したいときは、既定値を消さないよう
- * PeerJS の `util.defaultConfig.iceServers` に足す形で書くこと。
+ * **`config` はここに書かない。** PeerJS は `config` を浅く上書きする（マージしない）ので、
+ * ここに書くと既定の iceServers（STUNとTURN）が丸ごと消える。
+ * 経路さがしの設定を足したいときは、下の EXTRA_ICE_SERVERS を使うこと。
  */
 export const PEER_OPTIONS = {
   debug: 0,
 } as const;
+
+/**
+ * PeerJS の既定の iceServers に**足す**中継サーバー。
+ * `PeerLink` が `util.defaultConfig.iceServers` と繋ぎ合わせて使う（置き換えない）。
+ *
+ * PeerJS の既定には `turn:eu-0.turn.peerjs.com:3478` などが入っているが、
+ * **UDPの3478番だけ**なので、次の場合に経路が作れない。
+ *
+ * - UDPを通さないネットワーク（会社・学校・一部の公衆Wi-Fi）
+ * - PeerJS 側の無料TURNが混んでいる・止まっている
+ *
+ * そこで **TCP と 443番（TLS）でも中継できる先**を足しておく。
+ * 443番のTCPはWebの通信と同じ形なので、いちばん塞がれにくい。
+ *
+ * 到達できないものが混じっていても害はない。ICEは候補を並行して試し、
+ * 繋がらないものは黙って捨てるだけなので、多いほど繋がる可能性が上がる。
+ */
+export const EXTRA_ICE_SERVERS: RTCIceServer[] = [
+  // 予備のSTUN（自分の外から見える住所を知るため）
+  { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:stun.cloudflare.com:3478' },
+
+  // Open Relay Project の無料TURN。UDP・TCP・443 をひととおり並べる
+  {
+    urls: 'turn:openrelay.metered.ca:80',
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
+  },
+  {
+    urls: 'turn:openrelay.metered.ca:443',
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
+  },
+  {
+    urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
+  },
+];

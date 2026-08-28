@@ -124,9 +124,14 @@ npm run preview  # ビルド結果の確認
 - 接続先は `src/net/peerConfig.ts` の1か所にまとめてある。
   公開サーバーが止まったら、ここに `host` / `port` / `path` を足して
   自前の [PeerServer](https://github.com/peers/peerjs-server) に向ければ復旧できる
-- 直接つながらない回線どうしの中継（TURN）も、PeerJS の既定設定に無料のものが
-  含まれているのでそれに乗っている。**`peerConfig.ts` に `config`（iceServers）を
-  書くと、この既定値ごと消えて繋がらなくなる**ので触らないこと
+- 直接つながらない回線どうしの中継（TURN）は、PeerJS の既定に含まれる無料のものに
+  加えて、`peerConfig.ts` の `EXTRA_ICE_SERVERS` で **TCP・443番でも中継できる先**を
+  足している（既定のTURNはUDPの3478番だけなので、UDPを通さない回線で繋がらないため）
+- **`peerConfig.ts` に `config`（iceServers）を直接書いてはいけない。**
+  PeerJS は `config` を浅く上書きするので、既定値ごと消えて繋がらなくなる。
+  足したいときは `EXTRA_ICE_SERVERS` に書くこと
+- つながらないときは、画面に出る `ice:failed/failed h3 s1 r0` のような印が手がかりになる。
+  `r` が中継（TURN）の候補数で、**`r0` なら中継サーバーに届いていない**
 
 ## デプロイ
 

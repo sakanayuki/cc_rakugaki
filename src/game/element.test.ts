@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ELEMENTS, elementMultiplier, judgeElement } from './element';
+import { ELEMENTS, elementMultiplier, judgeElement, strongAgainst } from './element';
 
 describe('judgeElement（あたまの形から属性を決める）', () => {
   it('よこに細長いとチョキ', () => {
@@ -62,6 +62,32 @@ describe('elementMultiplier（じゃんけん三すくみ）', () => {
       for (const defender of ELEMENTS) {
         expect([0.5, 1, 2]).toContain(elementMultiplier(attacker, defender));
       }
+    }
+  });
+});
+
+describe('弱点になる攻撃属性', () => {
+  it('その守りに対して2倍になる手を返す', () => {
+    for (const defender of ELEMENTS) {
+      expect(elementMultiplier(strongAgainst(defender), defender)).toBe(2);
+    }
+  });
+
+  it('グーの守りにはパーが効く', () => {
+    expect(strongAgainst('rock')).toBe('paper');
+  });
+
+  it('チョキの守りにはグーが効く', () => {
+    expect(strongAgainst('scissors')).toBe('rock');
+  });
+
+  it('パーの守りにはチョキが効く', () => {
+    expect(strongAgainst('paper')).toBe('scissors');
+  });
+
+  it('自分自身は返さない', () => {
+    for (const defender of ELEMENTS) {
+      expect(strongAgainst(defender)).not.toBe(defender);
     }
   });
 });

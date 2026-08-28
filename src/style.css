@@ -1433,22 +1433,195 @@ body {
 
 /* ---------- 戦略画面 ---------- */
 
-.strategy-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+/* ---------- 戦略画面: ぞくせいの関係の図 ----------
 
-.strategy-head .save-thumb {
-  width: 56px;
-  height: 56px;
-}
+   色で意味を分けると3歳児には読み取れないので、
+   クリーム〜タンの同系色だけで面を作り、文字はすべて黒に近い墨色で置く。
+   目立たせたいのは「オススメ」の吹き出しひとつだけ。                     */
 
-.strategy-head .match-note {
-  flex: 1;
-  text-align: left;
+.strategy-hint {
   color: #fff;
   text-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+}
+
+.elem-panel {
+  padding: clamp(8px, 2vh, 12px) clamp(8px, 3vw, 14px);
+  border: 2px solid #e0d2b6;
+  border-radius: 18px;
+  background: #f7f1e4;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.12);
+}
+
+.elem-panel-title {
+  margin: 0 0 6px;
+  font-size: clamp(12px, 3.2vw, 15px);
+  font-weight: 900;
+  color: var(--ink);
+  letter-spacing: 0.04em;
+}
+
+.elem-cards {
+  display: flex;
+  gap: clamp(6px, 2vw, 10px);
+}
+
+.elem-card {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: clamp(6px, 1.6vh, 9px) 6px;
+  border: 1px solid #e4d7bd;
+  border-radius: 14px;
+  background: var(--cream);
+}
+
+.elem-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin: 0 0 5px;
+  font-size: clamp(11px, 3vw, 13px);
+  font-weight: 900;
+  color: var(--ink);
+}
+
+.elem-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid #e0d2b6;
+  background: #fff;
+  object-fit: contain;
+}
+
+/* こうげきの手 ➡ まもり の一本 */
+.elem-flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+
+.elem-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.elem-slot-owner {
+  font-size: clamp(8px, 2.2vw, 10px);
+  font-weight: 900;
+  color: #7d6d52;
+}
+
+.elem-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 4px 5px;
+  border-radius: 11px;
+  border: 2px solid #dccdae;
+  background: #efe5d0;
+  color: var(--ink);
+}
+
+/* まもりの側は面をへこませて、こうげきの手と役割を分ける */
+.elem-chip.guard {
+  border-style: dashed;
+  background: #fbf6ea;
+}
+
+.elem-chip.has-tip {
+  position: relative;
+}
+
+.elem-chip-emoji {
+  font-size: clamp(17px, 5vw, 22px);
+  line-height: 1;
+}
+
+.elem-chip-name {
+  font-size: clamp(10px, 2.7vw, 12px);
+  font-weight: 900;
+}
+
+.elem-arrow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* 下の持ち主ラベルのぶんだけ、絵札の中心に合わせて上げる */
+  margin-bottom: 14px;
+  color: #7d6d52;
+}
+
+.elem-arrow-mark {
+  font-size: clamp(13px, 3.6vw, 17px);
+  line-height: 1;
+}
+
+.elem-arrow-note {
+  font-size: clamp(9px, 2.4vw, 11px);
+  font-weight: 900;
+}
+
+.elem-note {
+  margin: 5px 0 0;
+  font-size: clamp(10px, 2.7vw, 12px);
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+.elem-caution {
+  margin: 6px 0 0;
+  font-size: clamp(9px, 2.5vw, 11px);
+  font-weight: 700;
+  color: #6f6047;
+}
+
+/* 電球つきの丸い吹き出し。オススメの手にだけ添える */
+.tip-badge {
+  position: absolute;
+  top: -11px;
+  right: -9px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  border: 2px solid #cbb582;
+  border-radius: 999px;
+  background: #f7e7bd;
+  color: var(--ink);
+  line-height: 1;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.12);
+  pointer-events: none;
+}
+
+/* 吹き出しのしっぽ */
+.tip-badge::after {
+  content: '';
+  position: absolute;
+  left: 12px;
+  bottom: -6px;
+  width: 8px;
+  height: 8px;
+  background: #f7e7bd;
+  border-right: 2px solid #cbb582;
+  border-bottom: 2px solid #cbb582;
+  transform: rotate(45deg);
+  border-bottom-right-radius: 2px;
+}
+
+.tip-bulb {
+  font-size: 10px;
+}
+
+.tip-text {
+  font-size: 9px;
+  font-weight: 900;
+  white-space: nowrap;
 }
 
 .hand-panel {
@@ -1483,6 +1656,7 @@ body {
 }
 
 .hand-btn {
+  position: relative;
   flex: 1;
   min-width: 0;
   min-height: 56px;
@@ -1522,6 +1696,17 @@ body {
   font-size: clamp(11px, 3vw, 14px);
   font-weight: 900;
   color: var(--ink);
+}
+
+/* オススメの手。吹き出しが飛び出すので上に少し余白をとる */
+.hand-btn.rec {
+  border-color: #d9c79f;
+  background: #fdf6e6;
+}
+
+.hand-btn .tip-badge {
+  top: -9px;
+  right: -4px;
 }
 
 /* ---------- オンライン戦闘: ジャンケンのカットイン ---------- */

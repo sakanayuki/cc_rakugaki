@@ -2,7 +2,12 @@
  * 戦略画面。3ターンぶんのグーチョキパーを先に決める。
  *
  * 選んだ手はジャンケンの手であると同時に、攻撃属性でもある。
- * 相手の守りの属性は見えないので、読み合いになる。
+ *
+ * 守りの属性はお互いに見せ合う。見えないと「なんとなく選ぶだけ」になってしまい
+ * 読み合いが成立しないため、図で
+ * 「自分がどの手を出されると痛いか」「相手にどの手がよく効くか」を示す。
+ * ただし効果ばつぐんの手でもジャンケンに負ければ攻撃できないので、
+ * オススメはあくまでダメージの目安であって必勝手ではない。
  *
  * ふたりが決め終わるまで中身は明かさない（コミット＆リビール）。
  * 両方の手がそろったところで乱数の種を合成し、戦闘画面へ渡す。
@@ -12,14 +17,14 @@ import { audio } from '../app/audio';
 import { onlineState } from '../app/OnlineState';
 import type { Scene, SceneContext } from '../app/SceneManager';
 import type { Element } from '../game/element';
-import { ELEMENTS } from '../game/element';
+import { ELEMENTS, strongAgainst } from '../game/element';
 import { PVP_TURNS, simulatePvp } from '../game/pvpEngine';
 import { commitHashOf, createReveal, mixSeed, verifyReveal } from '../net/fairness';
 import type { NetMessage } from '../net/protocol';
 import { revealOf } from '../net/protocol';
 import { thumbnailFromDoc } from '../paint/thumbnail';
 import { button, h } from '../ui/components';
-import { ELEMENT_INFO, S } from '../ui/strings';
+import { ELEMENT_INFO, S, strongHandNote, weakHandNote } from '../ui/strings';
 
 export function createStrategyScene(ctx: SceneContext): Scene {
   const link = onlineState.link;
@@ -32,7 +37,10 @@ export function createStrategyScene(ctx: SceneContext): Scene {
 
   const round = onlineState.round;
   const choices: (Element | null)[] = Array.from({ length: PVP_TURNS }, () => null);
-  const status = h('p', { class: 'hint-line', text: S.strategyUnknown });
+  const status = h('p', { class: 'hint-line', text: S.strategyReady });
+
+  /** 相手の守りに対して2倍になる手。オススメ印をつける先 */
+  const recommended = strongAgainst(opponent.stats.element);
 
   let decided = false;
   let disposed = false;
@@ -45,17 +53,101 @@ export function createStrategyScene(ctx: SceneContext): Scene {
     onClick: () => void decide(),
   });
 
+  /** 電球つきの丸い吹き出し。相手によく効く手に添える */
+  function recommendBadge(): HTMLElement {
+    return h('span', { class: 'tip-badge' }, [
+      h('span', { class: 'tip-bulb', text: S.recommendBulb }),
+      h('span', { class: 'tip-text', text: S.recommendLabel }),
+    ]);
+  }
+
+  /**
+   * 「こうげきの手 ➡ まもり」の一本の図。
+   * どちらの手なのかが一目で分かるよう、絵札の下に小さく持ち主を書く。
+   */
+  function elementFlow(
+    hand: Element,
+    defence: Element,
+    handOwner: string,
+    guardOwner: string,
+    withBadge: boolean,
+  ): HTMLElement {
+    const attack = ELEMENT_INFO[hand];
+    const guard = ELEMENT_INFO[defence];
+    return h('div', { class: 'elem-flow' }, [
+      h('span', { class: 'elem-slot' }, [
+        h('span', { class: withBadge ? 'elem-chip attack has-tip' : 'elem-chip attack' }, [
+          ...(withBadge ? [recommendBadge()] : []),
+          h('span', { class: 'elem-chip-emoji', text: attack.emoji }),
+          h('span', { class: 'elem-chip-name', text: attack.name }),
+        ]),
+        h('span', { class: 'elem-slot-owner', text: handOwner }),
+      ]),
+      h('span', { class: 'elem-arrow' }, [
+        h('span', { class: 'elem-arrow-mark', text: S.elemArrow }),
+        h('span', { class: 'elem-arrow-note', text: S.elemDouble }),
+      ]),
+      h('span', { class: 'elem-slot' }, [
+        h('span', { class: 'elem-chip guard' }, [
+          h('span', { class: 'elem-chip-emoji', text: guard.emoji }),
+          h('span', { class: 'elem-chip-name', text: guard.name }),
+        ]),
+        h('span', { class: 'elem-slot-owner', text: guardOwner }),
+      ]),
+    ]);
+  }
+
+  /**
+   * ぞくせいの関係を並べた図。
+   * 左＝自分がやられる手、右＝相手によく効く手。どちらも「こうげき ➡ まもり」の向き。
+   */
+  function elementPanel(thumbnail: HTMLCanvasElement | null): HTMLElement {
+    const myDefence = me!.stats.element;
+    const theirDefence = opponent!.stats.element;
+    return h('div', { class: 'elem-panel' }, [
+      h('h3', { class: 'elem-panel-title', text: S.elemPanelTitle }),
+      h('div', { class: 'elem-cards' }, [
+        h('div', { class: 'elem-card' }, [
+          h('p', { class: 'elem-card-head', text: S.elemMineHead }),
+          elementFlow(strongAgainst(myDefence), myDefence, S.elemTheirHand, S.sideYou, false),
+          h('p', { class: 'elem-note', text: weakHandNote(myDefence) }),
+        ]),
+        h('div', { class: 'elem-card' }, [
+          h('p', { class: 'elem-card-head' }, [
+            ...(thumbnail
+              ? [h('img', { class: 'elem-thumb', alt: S.sideOpponent, src: thumbnail.toDataURL() })]
+              : []),
+            h('span', { text: S.elemTheirsHead }),
+          ]),
+          elementFlow(
+            strongAgainst(theirDefence),
+            theirDefence,
+            S.elemYourHand,
+            S.sideOpponent,
+            true,
+          ),
+          h('p', { class: 'elem-note', text: strongHandNote(theirDefence) }),
+        ]),
+      ]),
+      h('p', { class: 'elem-caution', text: S.strategyJankenNote }),
+    ]);
+  }
+
   /** 1ターンぶんの選択肢 */
   function turnRow(turn: number): HTMLElement {
     const buttons = ELEMENTS.map((element) => {
       const info = ELEMENT_INFO[element];
+      const isRecommended = element === recommended;
       const node = h('button', {
-        class: 'hand-btn',
+        class: isRecommended ? 'hand-btn rec' : 'hand-btn',
         type: 'button',
         'data-turn': String(turn),
         'data-hand': element,
-        'aria-label': `${S.turnLabels[turn]} ${info.name}`,
+        'aria-label': isRecommended
+          ? `${S.turnLabels[turn]} ${info.name} ${S.recommendLabel}`
+          : `${S.turnLabels[turn]} ${info.name}`,
       }, [
+        ...(isRecommended ? [recommendBadge()] : []),
         h('span', { class: 'hand-emoji', text: info.emoji }),
         h('span', { class: 'hand-name', text: info.name }),
       ]);
@@ -200,16 +292,8 @@ export function createStrategyScene(ctx: SceneContext): Scene {
       root.append(
         h('div', { class: 'scene' }, [
           h('h2', { class: 'draw-title', text: S.strategyTitle }),
-          h('div', { class: 'strategy-head' }, [
-            ...(thumbnail
-              ? [
-                  h('div', { class: 'save-thumb' }, [
-                    h('img', { alt: S.sideOpponent, src: thumbnail.toDataURL() }),
-                  ]),
-                ]
-              : []),
-            h('p', { class: 'match-note', text: S.strategyHint }),
-          ]),
+          elementPanel(thumbnail),
+          h('p', { class: 'match-note strategy-hint', text: S.strategyHint }),
           h('div', { class: 'hand-panel' }, rows),
           status,
           h('div', { class: 'row row-center' }, [

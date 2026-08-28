@@ -30,6 +30,26 @@ export function judgeElement(aspect: number, density: number): Element {
   return 'paper';
 }
 
+/** 三すくみ。攻める側 → 倒せる側 */
+const BEATS: Record<Element, Element> = {
+  rock: 'scissors',
+  scissors: 'paper',
+  paper: 'rock',
+};
+
+/**
+ * その守りの属性に対して**こうかばつぐん（2倍）になる攻撃属性**を返す。
+ *
+ * オンライン対戦の戦略画面で、
+ * 「相手のまもりに よく効く手」と「自分のまもりが やられる手」の
+ * どちらを出すのにも使う（守り側から見れば、これが弱点そのもの）。
+ */
+export function strongAgainst(defender: Element): Element {
+  const found = ELEMENTS.find((attacker) => BEATS[attacker] === defender);
+  // 三すくみなので必ず1つ見つかる
+  return found ?? defender;
+}
+
 /**
  * 属性相性の倍率。
  *   グー   → チョキ ×2 / グー ×1 / パー ×0.5
@@ -38,10 +58,5 @@ export function judgeElement(aspect: number, density: number): Element {
  */
 export function elementMultiplier(attacker: Element, defender: Element): 0.5 | 1 | 2 {
   if (attacker === defender) return 1;
-  const beats: Record<Element, Element> = {
-    rock: 'scissors',
-    scissors: 'paper',
-    paper: 'rock',
-  };
-  return beats[attacker] === defender ? 2 : 0.5;
+  return BEATS[attacker] === defender ? 2 : 0.5;
 }

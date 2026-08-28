@@ -4,6 +4,7 @@
  */
 
 import type { Element } from '../game/element';
+import { strongAgainst } from '../game/element';
 import type { PartId } from '../paint/types';
 
 export const S = {
@@ -136,9 +137,21 @@ export const S = {
   // --- 戦略画面 ---
   strategyTitle: 'どの てで たたかう？',
   strategyHint: 'えらんだ ては ジャンケンにも なるし こうげきの ちからにも なるよ',
-  strategyUnknown: 'あいての まもりは わからないよ',
   strategyDecide: '⚔️ けってい！',
   turnLabels: ['1かいめ', '2かいめ', '3かいめ'],
+
+  // --- 戦略画面：ぞくせいの図 ---
+  elemPanelTitle: 'ぞくせいの かんけい',
+  elemMineHead: 'きみの まもり',
+  elemTheirsHead: 'あいての まもり',
+  elemDouble: '2ばい',
+  elemYourHand: 'きみの て',
+  elemTheirHand: 'あいての て',
+  elemArrow: '➡',
+  recommendLabel: 'オススメ',
+  recommendBulb: '💡',
+  strategyJankenNote: 'オススメの ても ジャンケンに まけると こうげき できないよ',
+  strategyReady: 'ぜんぶ えらべたら けってい！',
 
   // --- オンライン戦闘 ---
   jankenYouWin: 'きみの かち！ こうげき できる！',
@@ -171,6 +184,18 @@ export const ELEMENT_INFO: Record<Element, { emoji: string; name: string; note: 
 export function elementLabel(el: Element): string {
   const info = ELEMENT_INFO[el];
   return `${info.emoji} ${info.name}（${info.note}）`;
+}
+
+/** その守りが やられてしまう手（弱点） */
+export function weakHandNote(defender: Element): string {
+  const hand = ELEMENT_INFO[strongAgainst(defender)];
+  return `${hand.name} を だされると ダメージ ${S.elemDouble}！`;
+}
+
+/** その守りに よく効く手 */
+export function strongHandNote(defender: Element): string {
+  const hand = ELEMENT_INFO[strongAgainst(defender)];
+  return `${hand.name} で こうげきすると こうかばつぐん！`;
 }
 
 /** 「○れんしょうちゅう！」 */

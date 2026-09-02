@@ -79,7 +79,8 @@ export function createOnlineBattleScene(ctx: SceneContext): Scene {
     const percent = hpPercent(hp, statsOf(side).maxHp);
     const ratio = Math.max(0, Math.min(1, percent / 100));
     view.fill.style.transform = `scaleX(${ratio})`;
-    view.fill.style.background = ratio > 0.5 ? '#43c26b' : ratio > 0.22 ? '#ffd93d' : '#ff6b6b';
+    // 色はCSSのトークン側に持たせる（ここでは段階だけ決める）
+    view.fill.className = ratio > 0.5 ? 'hp-fill' : ratio > 0.22 ? 'hp-fill mid' : 'hp-fill low';
     view.percent.textContent = `${percent}%`;
   }
 

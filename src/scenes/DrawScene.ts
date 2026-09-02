@@ -393,9 +393,11 @@ export function createDrawScene(ctx: SceneContext, params: SceneParamMap['draw']
             h('div', { class: 'toolbar' }, [
               h('div', { class: 'tool-row' }, [h('div', { class: 'palette' }, swatches)]),
               h('div', { class: 'tool-row' }, [
-                penButton,
-                fillButton,
-                ...widthButtons,
+                // 同じ種類の選択肢はM3の連結ボタングループにまとめる。
+                // 「道具えらび」と「ふとさえらび」は別の選択なので、群も分ける
+                h('div', { class: 'btn-group' }, [penButton, fillButton]),
+                h('div', { class: 'btn-group' }, widthButtons),
+                // 取り消し系は選択ではないので、群に入れず単独で置く
                 undoButton,
                 resetButton,
               ]),

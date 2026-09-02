@@ -39,8 +39,24 @@ export function h<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
+/**
+ * ボタンの強さ（Material 3 のボタン階層に対応）。
+ *
+ * | variant   | M3でいうと          | 使いどころ           |
+ * |-----------|--------------------|---------------------|
+ * | default   | filled tonal       | ふつうの操作          |
+ * | primary   | filled (primary)   | その画面の主役         |
+ * | go        | filled (secondary) | 進む・決める          |
+ * | danger    | filled (error)     | 消す・やめる          |
+ * | ghost     | outlined           | 添え物・戻る          |
+ * | text      | text               | いちばん弱い          |
+ * | elevated  | elevated           | 同じ色の面に重ねるとき   |
+ *
+ * 1画面に filled の主役はひとつだけ、が M3 の約束。
+ */
 export interface ButtonOptions {
-  variant?: 'default' | 'primary' | 'go' | 'danger' | 'ghost';
+  variant?: 'default' | 'primary' | 'go' | 'danger' | 'ghost' | 'text' | 'elevated';
+  /** M3のボタンサイズ。small=S / normal=M / huge=L */
   size?: 'normal' | 'huge' | 'small';
   class?: string;
   disabled?: boolean;

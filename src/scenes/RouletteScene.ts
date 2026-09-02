@@ -285,8 +285,9 @@ export function createRouletteScene(ctx: SceneContext): Scene {
       return;
     }
     const slot = slots[selected];
+    // M3では error(赤) は「壊す・やめる」の色。ここは画面の主役なので primary
     const fight = button(S.fight, {
-      variant: 'danger',
+      variant: 'primary',
       size: 'huge',
       onClick: () => {
         gameState.enemyId = slot.enemy.id;

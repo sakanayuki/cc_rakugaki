@@ -75,15 +75,14 @@ export function createPreviewScene(ctx: SceneContext): Scene {
     });
   }
 
-  // 4つとも同じ色にして、「この領域の操作」であることを色ではなく配置で示す
+  // 4つとも同じトーナルボタン。「この領域の操作」であることを色ではなく配置で示す
   const actionButtons = [
     button(S.actAttack, {
-      class: 'action-btn',
       onClick: () => playAction(attackActionFor(stats.element)),
     }),
-    button(S.actHit, { class: 'action-btn', onClick: () => playAction('hit') }),
-    button(S.actDodge, { class: 'action-btn', onClick: () => playAction('dodge') }),
-    button(S.actGuard, { class: 'action-btn', onClick: () => playAction('guard') }),
+    button(S.actHit, { onClick: () => playAction('hit') }),
+    button(S.actDodge, { onClick: () => playAction('dodge') }),
+    button(S.actGuard, { onClick: () => playAction('guard') }),
   ];
 
   function setButtonsEnabled(enabled: boolean): void {

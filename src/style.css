@@ -1,31 +1,180 @@
 /* ============================================================
-   らくがきバトル - グローバルスタイル
-   3歳児が指で操作する前提: 大きなタップ領域・強いコントラスト・ひらがな
+   らくがきバトル - Material 3 Expressive
+   ============================================================
+
+   このファイルは Material 3 Expressive のデザインシステムに沿って組んである。
+   守っているのは次の4つ。
+
+   1. 色は「役割（ロール）」でしか指定しない
+      #ff9f43 のような生の色をコンポーネントに直接書かない。
+      primary / secondary / tertiary / error と、その container、
+      surface の階層だけを使う。色を変えたいときは §1 のトークンだけ直す。
+
+   2. 文字はタイプスケールから選ぶ
+      display / headline / title / body / label の5系統。
+      3歳児が指で使うので、M3の推奨より1〜2段太い「emphasized」寄りにしてある。
+
+   3. かたち（shape）と押した感じ
+      角丸はシェイプスケール（4/8/12/16/28/48/full）から選ぶ。
+      押したときは M3 Expressive のシェイプモーフ（丸 → 角ばる）＋
+      ステートレイヤー（currentColor の薄い膜）で返事をする。
+      第3版までの「下に濃い影を置いて沈む」表現は使わない。
+
+   4. 動きはモーショントークン
+      emphasized 系のイージングと、決められた duration だけを使う。
+
+   ダークテーマは入れていない。3Dステージ・記念写真・ルーレットが
+   明るい絵で固定されているため、面だけ暗くしても釣り合わないため。
+
+   ============================================================ */
+
+/* ============================================================
+   1. デザイントークン
    ============================================================ */
 
 :root {
-  --sky-1: #8fd3f4;
-  --sky-2: #b7e4c7;
-  --cream: #fffdf5;
-  --ink: #3b3226;
-  --ink-soft: #7a6a55;
-  --line: #e4d9c3;
-  --orange: #ff9f43;
-  --orange-dark: #e07f22;
-  --green: #43c26b;
-  --green-dark: #2f9c51;
-  --blue: #4aa8e0;
-  --blue-dark: #2f83b8;
-  --red: #ff6b6b;
-  --red-dark: #d94c4c;
-  --purple: #a37bd8;
-  --yellow: #ffd93d;
-  --shadow: 0 4px 0 rgba(0, 0, 0, 0.18);
-  --radius: 18px;
+  /* ---------- 1.1 色（ライトテーマ） ----------
+     ソースカラーはこのアプリの元の橙 #ff9f43。
+     そこから作った主役の色に、緑（よい報せ）と青（ふつうの操作）を
+     secondary / tertiary として割り当てている。
+     コントラストは全ペア 4.5:1 以上（outline-variant は仕切り線なので除く）。 */
+
+  --md-sys-color-primary: #bb5100;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #ffdbba;
+  --md-sys-color-on-primary-container: #3a1200;
+
+  --md-sys-color-secondary: #1b7a46;
+  --md-sys-color-on-secondary: #ffffff;
+  --md-sys-color-secondary-container: #a6f2c0;
+  --md-sys-color-on-secondary-container: #002110;
+
+  --md-sys-color-tertiary: #0e6e9c;
+  --md-sys-color-on-tertiary: #ffffff;
+  --md-sys-color-tertiary-container: #c2e8ff;
+  --md-sys-color-on-tertiary-container: #001e2c;
+
+  --md-sys-color-error: #b3261e;
+  --md-sys-color-on-error: #ffffff;
+  --md-sys-color-error-container: #ffdad6;
+  --md-sys-color-on-error-container: #410e0b;
+
+  --md-sys-color-surface: #fff8f2;
+  --md-sys-color-on-surface: #241a11;
+  --md-sys-color-surface-variant: #f4dccb;
+  --md-sys-color-on-surface-variant: #54443a;
+
+  --md-sys-color-surface-container-lowest: #ffffff;
+  --md-sys-color-surface-container-low: #fff1e7;
+  --md-sys-color-surface-container: #fbe9dd;
+  --md-sys-color-surface-container-high: #f6e0d2;
+  --md-sys-color-surface-container-highest: #f0d7c8;
+  --md-sys-color-surface-dim: #e7d3c4;
+
+  --md-sys-color-outline: #867466;
+  --md-sys-color-outline-variant: #dcc7b6;
+
+  --md-sys-color-inverse-surface: #382e27;
+  --md-sys-color-inverse-on-surface: #ffede3;
+  --md-sys-color-scrim: #000000;
+
+  /* カスタムカラーロール。
+     M3 の「custom color」の作法にならい、他と同じ container 形式で持つ。
+     金＝殿堂入りと強敵ボーナスだけに使う特別な色。 */
+  --app-color-gold-container: #ffe08a;
+  --app-color-on-gold-container: #402d00;
+  --app-color-gold-outline: #c9a227;
+
+  /* ---------- 1.2 タイプスケール ----------
+     画面幅で伸縮させる。上限はM3の標準値、下限は小さいスマホでも収まる値。 */
+
+  --md-sys-typescale-display-large-size: clamp(36px, 10vw, 57px);
+  --md-sys-typescale-display-medium-size: clamp(30px, 8vw, 45px);
+  --md-sys-typescale-headline-large-size: clamp(26px, 6.6vw, 32px);
+  --md-sys-typescale-headline-medium-size: clamp(22px, 5.6vw, 28px);
+  --md-sys-typescale-headline-small-size: clamp(19px, 4.8vw, 24px);
+  --md-sys-typescale-title-large-size: clamp(17px, 4.4vw, 22px);
+  --md-sys-typescale-title-medium-size: clamp(15px, 3.9vw, 16px);
+  --md-sys-typescale-title-small-size: clamp(13px, 3.4vw, 14px);
+  --md-sys-typescale-body-large-size: clamp(14px, 3.8vw, 16px);
+  --md-sys-typescale-body-medium-size: clamp(12.5px, 3.4vw, 14px);
+  --md-sys-typescale-body-small-size: clamp(11px, 3vw, 12px);
+  --md-sys-typescale-label-large-size: clamp(13px, 3.6vw, 15px);
+  --md-sys-typescale-label-medium-size: clamp(11px, 3vw, 12px);
+  --md-sys-typescale-label-small-size: clamp(10px, 2.6vw, 11px);
+
+  /* Expressive は強調のウェイト差が大きい。ひらがなの丸ゴシックでも
+     読み分けられるよう、標準より1段太めに割り当てる */
+  --md-sys-typescale-weight-regular: 500;
+  --md-sys-typescale-weight-medium: 700;
+  --md-sys-typescale-weight-bold: 800;
+  --md-sys-typescale-weight-emphasized: 900;
+
+  --md-ref-typeface-brand: "Hiragino Maru Gothic ProN", "ヒラギノ丸ゴ ProN",
+    "M PLUS Rounded 1c", "Rounded Mplus 1c", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --md-ref-typeface-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* ---------- 1.3 シェイプ ---------- */
+
+  --md-sys-shape-corner-none: 0;
+  --md-sys-shape-corner-extra-small: 4px;
+  --md-sys-shape-corner-small: 8px;
+  --md-sys-shape-corner-medium: 12px;
+  --md-sys-shape-corner-large: 16px;
+  --md-sys-shape-corner-extra-large: 28px;
+  --md-sys-shape-corner-extra-extra-large: 48px;
+  --md-sys-shape-corner-full: 999px;
+
+  /* ---------- 1.4 エレベーション ----------
+     影の色は面の色に合わせて暖色寄りにしてある */
+
+  --md-sys-elevation-level0: none;
+  --md-sys-elevation-level1: 0 1px 2px rgba(56, 46, 39, 0.28), 0 1px 3px 1px rgba(56, 46, 39, 0.13);
+  --md-sys-elevation-level2: 0 1px 2px rgba(56, 46, 39, 0.28), 0 2px 6px 2px rgba(56, 46, 39, 0.13);
+  --md-sys-elevation-level3: 0 1px 3px rgba(56, 46, 39, 0.28), 0 4px 8px 3px rgba(56, 46, 39, 0.14);
+  --md-sys-elevation-level4: 0 2px 3px rgba(56, 46, 39, 0.28), 0 6px 10px 4px rgba(56, 46, 39, 0.14);
+  --md-sys-elevation-level5: 0 4px 4px rgba(56, 46, 39, 0.28), 0 8px 12px 6px rgba(56, 46, 39, 0.14);
+
+  /* ---------- 1.5 ステートレイヤー ---------- */
+
+  --md-sys-state-hover-opacity: 0.08;
+  --md-sys-state-focus-opacity: 0.1;
+  --md-sys-state-pressed-opacity: 0.1;
+  --md-sys-state-disabled-content-opacity: 0.38;
+  --md-sys-state-disabled-container-opacity: 0.12;
+
+  /* ---------- 1.6 モーション ---------- */
+
+  --md-sys-motion-easing-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --md-sys-motion-easing-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --md-sys-motion-easing-emphasized-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15);
+  --md-sys-motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  /* Expressive のばね。行き過ぎてから戻る＝弾む感じを出す */
+  --md-sys-motion-easing-spring: cubic-bezier(0.2, 1.4, 0.4, 1);
+
+  --md-sys-motion-duration-short2: 100ms;
+  --md-sys-motion-duration-short4: 200ms;
+  --md-sys-motion-duration-medium2: 300ms;
+  --md-sys-motion-duration-medium4: 400ms;
+  --md-sys-motion-duration-long2: 500ms;
+  --md-sys-motion-duration-extra-long2: 700ms;
+
+  /* ---------- 1.7 間隔（4dpグリッド） ---------- */
+
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+
+  /* 3歳児が指で押す最小サイズ。M3の48dpより大きめにとる */
   --tap: 56px;
-  --font: "Hiragino Maru Gothic ProN", "ヒラギノ丸ゴ ProN", "M PLUS Rounded 1c",
-    "Rounded Mplus 1c", "Segoe UI", system-ui, -apple-system, sans-serif;
 }
+
+/* ============================================================
+   2. ベース
+   ============================================================ */
 
 * {
   box-sizing: border-box;
@@ -42,11 +191,14 @@ body {
 }
 
 body {
-  font-family: var(--font);
-  color: var(--ink);
-  background: linear-gradient(170deg, var(--sky-1) 0%, var(--sky-2) 100%);
+  font-family: var(--md-ref-typeface-brand);
+  font-weight: var(--md-sys-typescale-weight-regular);
+  color: var(--md-sys-color-on-surface);
+  /* 面はニュートラル。色はコンテナ（ボタン・カード・チップ）側で出す */
+  background: var(--md-sys-color-surface);
   user-select: none;
   -webkit-user-select: none;
+  color-scheme: light;
 }
 
 #app {
@@ -55,6 +207,11 @@ body {
   height: 100dvh;
   display: flex;
   flex-direction: column;
+  background: linear-gradient(
+    180deg,
+    var(--md-sys-color-surface) 0%,
+    var(--md-sys-color-surface-container) 100%
+  );
 }
 
 #scene-root {
@@ -71,16 +228,18 @@ body {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: max(10px, env(safe-area-inset-top)) 12px
-    max(10px, env(safe-area-inset-bottom)) 12px;
-  gap: 10px;
-  animation: scene-in 0.28s ease-out both;
+  padding: max(var(--sp-3), env(safe-area-inset-top)) var(--sp-3)
+    max(var(--sp-3), env(safe-area-inset-bottom)) var(--sp-3);
+  gap: var(--sp-3);
+  animation: scene-in var(--md-sys-motion-duration-medium2)
+    var(--md-sys-motion-easing-emphasized-decelerate) both;
 }
 
+/* 画面の入りは M3 の「上にすべり込む」パターン */
 @keyframes scene-in {
   from {
     opacity: 0;
-    transform: translateY(14px);
+    transform: translateY(16px);
   }
   to {
     opacity: 1;
@@ -93,113 +252,579 @@ body {
   justify-content: center;
 }
 
-/* ---------- ボタン ---------- */
+/* 押した・出てきたときの弾み。Expressive のばねを共通で使う */
+@keyframes pop-in {
+  from {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================
+   3. 共通コンポーネント
+   ============================================================ */
+
+/* ---------- 3.1 ボタン ----------
+
+   M3のボタンは「色の種類」ではなく「強さ」で選ぶ。
+     .btn            塗りつぶし（トーナル / 青系）… ふつうの操作
+     .btn-primary    塗りつぶし（primary / 橙）  … その画面の主役
+     .btn-go         塗りつぶし（secondary / 緑）… 進む・決める
+     .btn-danger     塗りつぶし（error / 赤）    … 消す・やめる
+     .btn-ghost      アウトライン               … 添え物・戻る
+     .btn-text       テキスト                   … いちばん弱い
+
+   押したときは
+     ・角丸が full → large に変わる（シェイプモーフ）
+     ・currentColor のステートレイヤーが 10% 乗る
+     ・ほんの少し縮む
+   の3つで返事をする。影を沈ませる表現は使わない。                     */
 
 .btn {
-  font-family: inherit;
-  font-weight: 800;
-  font-size: 20px;
-  color: #fff;
-  background: var(--blue);
-  border: none;
-  border-radius: var(--radius);
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
   min-height: var(--tap);
   min-width: var(--tap);
-  padding: 12px 22px;
+  padding: var(--sp-3) var(--sp-6);
+  border: none;
+  border-radius: var(--md-sys-shape-corner-full);
+  font-family: inherit;
+  font-size: var(--md-sys-typescale-label-large-size);
+  font-weight: var(--md-sys-typescale-weight-bold);
+  line-height: 1.3;
+  letter-spacing: 0.01em;
   cursor: pointer;
-  box-shadow: 0 5px 0 var(--blue-dark);
-  transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.15s ease;
   touch-action: manipulation;
-  line-height: 1.25;
+  overflow: hidden;
+  /* ラベルを折り返さない。2行になると押す場所が縦に伸びて狙いにくくなる */
+  white-space: nowrap;
+  background: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+  box-shadow: var(--md-sys-elevation-level0);
+  transition: border-radius var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-spring),
+    transform var(--md-sys-motion-duration-short2) var(--md-sys-motion-easing-emphasized),
+    box-shadow var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    background-color var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
+}
+
+/* ステートレイヤー。文字色と同じ色を薄くかぶせる */
+.btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: currentColor;
+  opacity: 0;
+  transition: opacity var(--md-sys-motion-duration-short2) var(--md-sys-motion-easing-standard);
+}
+
+@media (hover: hover) {
+  .btn:hover:not(:disabled)::after {
+    opacity: var(--md-sys-state-hover-opacity);
+  }
 }
 
 .btn:active:not(:disabled) {
-  transform: translateY(4px);
-  box-shadow: 0 1px 0 var(--blue-dark);
+  /* シェイプモーフ: 丸 → 角ばる */
+  border-radius: var(--md-sys-shape-corner-large);
+  transform: scale(0.96);
+}
+
+.btn:active:not(:disabled)::after {
+  opacity: var(--md-sys-state-pressed-opacity);
+}
+
+.btn:focus-visible {
+  outline: 3px solid var(--md-sys-color-secondary);
+  outline-offset: 2px;
 }
 
 .btn:disabled {
-  filter: grayscale(0.85);
-  opacity: 0.55;
   cursor: default;
-  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.2);
+  color: color-mix(in srgb, var(--md-sys-color-on-surface) 38%, transparent);
+  background: color-mix(in srgb, var(--md-sys-color-on-surface) 12%, transparent);
+  box-shadow: var(--md-sys-elevation-level0);
 }
 
 .btn-primary {
-  background: var(--orange);
-  box-shadow: 0 5px 0 var(--orange-dark);
-}
-.btn-primary:active:not(:disabled) {
-  box-shadow: 0 1px 0 var(--orange-dark);
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
 }
 
 .btn-go {
-  background: var(--green);
-  box-shadow: 0 5px 0 var(--green-dark);
-}
-.btn-go:active:not(:disabled) {
-  box-shadow: 0 1px 0 var(--green-dark);
+  background: var(--md-sys-color-secondary);
+  color: var(--md-sys-color-on-secondary);
 }
 
 .btn-danger {
-  background: var(--red);
-  box-shadow: 0 5px 0 var(--red-dark);
-}
-.btn-danger:active:not(:disabled) {
-  box-shadow: 0 1px 0 var(--red-dark);
+  background: var(--md-sys-color-error);
+  color: var(--md-sys-color-on-error);
 }
 
+/* アウトライン。面を持たないので、押しても影は出さない */
 .btn-ghost {
-  background: #fff;
-  color: var(--ink);
-  box-shadow: 0 4px 0 var(--line);
+  background: transparent;
+  color: var(--md-sys-color-on-surface);
+  border: 1px solid var(--md-sys-color-outline);
 }
-.btn-ghost:active:not(:disabled) {
-  box-shadow: 0 1px 0 var(--line);
+
+.btn-ghost:disabled {
+  border-color: color-mix(in srgb, var(--md-sys-color-on-surface) 12%, transparent);
+}
+
+.btn-text {
+  background: transparent;
+  color: var(--md-sys-color-primary);
+  padding-inline: var(--sp-3);
+}
+
+/* 面から持ち上がる。地の色と同じ面を重ねるときに使う */
+.btn-elevated {
+  background: var(--md-sys-color-surface-container-low);
+  color: var(--md-sys-color-primary);
+  box-shadow: var(--md-sys-elevation-level1);
+}
+
+.btn-elevated:active:not(:disabled) {
+  box-shadow: var(--md-sys-elevation-level1);
+}
+
+/* サイズ。M3 Expressive の S / M / L に相当する3段 */
+.btn-small {
+  min-height: 40px;
+  padding: var(--sp-2) var(--sp-4);
+  font-size: var(--md-sys-typescale-label-medium-size);
 }
 
 .btn-huge {
-  font-size: 28px;
-  padding: 18px 34px;
-  min-height: 74px;
-  border-radius: 24px;
+  min-height: 84px;
+  padding: var(--sp-5) var(--sp-4);
+  font-size: var(--md-sys-typescale-headline-small-size);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
 }
 
-.btn-small {
-  font-size: 16px;
-  padding: 8px 14px;
-  min-height: 48px;
+.btn-huge:active:not(:disabled) {
+  border-radius: var(--md-sys-shape-corner-extra-large);
 }
 
-/* ---------- ミュートボタン ---------- */
+/* ---------- 3.2 アイコンボタン ---------- */
 
-#mute-btn {
-  position: fixed;
-  top: max(8px, env(safe-area-inset-top));
-  right: max(8px, env(safe-area-inset-right));
+.icon-btn {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 48px;
   height: 48px;
-  border-radius: 50%;
+  padding: 0;
   border: none;
-  background: rgba(255, 255, 255, 0.9);
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: inherit;
   font-size: 22px;
   line-height: 1;
   cursor: pointer;
-  z-index: 60;
-  box-shadow: var(--shadow);
   touch-action: manipulation;
+  overflow: hidden;
+  box-shadow: var(--md-sys-elevation-level1);
+  transition: border-radius var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-spring),
+    transform var(--md-sys-motion-duration-short2) var(--md-sys-motion-easing-emphasized);
 }
 
-/* ---------- メインメニュー ---------- */
+.icon-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: currentColor;
+  opacity: 0;
+  transition: opacity var(--md-sys-motion-duration-short2) var(--md-sys-motion-easing-standard);
+}
+
+.icon-btn:active:not(:disabled) {
+  border-radius: var(--md-sys-shape-corner-medium);
+  transform: scale(0.94);
+}
+
+.icon-btn:active:not(:disabled)::after {
+  opacity: var(--md-sys-state-pressed-opacity);
+}
+
+.icon-btn:disabled {
+  cursor: default;
+  color: color-mix(in srgb, var(--md-sys-color-on-surface) 38%, transparent);
+  box-shadow: var(--md-sys-elevation-level0);
+}
+
+/* おとの切り替え。見た目は .icon-btn のまま、位置だけここで決める */
+#mute-btn {
+  position: fixed;
+  top: max(var(--sp-2), env(safe-area-inset-top));
+  right: max(var(--sp-2), env(safe-area-inset-right));
+  z-index: 60;
+}
+
+/* ---------- 3.3 ボタングループ（連結トグル） ----------
+
+   M3 Expressive の目玉のひとつ。同じ種類の選択肢を隙間なく並べ、
+   外側だけ大きく丸める。選んだものは面の色が変わって少し膨らむ。      */
+
+.btn-group {
+  display: flex;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+
+.btn-group .tool-btn {
+  border-radius: var(--md-sys-shape-corner-small);
+}
+
+.btn-group .tool-btn:first-child {
+  border-start-start-radius: var(--md-sys-shape-corner-full);
+  border-end-start-radius: var(--md-sys-shape-corner-full);
+}
+
+.btn-group .tool-btn:last-child {
+  border-start-end-radius: var(--md-sys-shape-corner-full);
+  border-end-end-radius: var(--md-sys-shape-corner-full);
+}
+
+.btn-group .tool-btn:only-child {
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+/* 道具ボタン。グループの中でも単独でも同じ見た目 */
+.tool-btn {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-width: 54px;
+  min-height: 50px;
+  padding: var(--sp-1) var(--sp-2);
+  border: none;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: inherit;
+  font-size: 22px;
+  font-weight: var(--md-sys-typescale-weight-bold);
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+  overflow: hidden;
+  transition: background-color var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    color var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    transform var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-spring);
+}
+
+.tool-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: currentColor;
+  opacity: 0;
+  transition: opacity var(--md-sys-motion-duration-short2) var(--md-sys-motion-easing-standard);
+}
+
+.tool-btn:active:not(:disabled)::after {
+  opacity: var(--md-sys-state-pressed-opacity);
+}
+
+.tool-btn small {
+  font-size: var(--md-sys-typescale-label-small-size);
+  font-weight: var(--md-sys-typescale-weight-medium);
+  color: inherit;
+  opacity: 0.85;
+}
+
+/* 選択中。M3のトグルは面の色で示す（枠線ではない） */
+.tool-btn.selected {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  transform: scale(1.04);
+}
+
+.tool-btn:disabled {
+  cursor: default;
+  color: color-mix(in srgb, var(--md-sys-color-on-surface) 38%, transparent);
+  background: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+}
+
+/* ---------- 3.4 カード ----------
+
+   面の階層で情報のまとまりを作る。押せないものには影も枠も付けない。 */
+
+.m3-card {
+  background: var(--md-sys-color-surface-container-low);
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  padding: var(--sp-3);
+}
+
+.m3-card-elevated {
+  background: var(--md-sys-color-surface-container-low);
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  padding: var(--sp-3);
+  box-shadow: var(--md-sys-elevation-level1);
+}
+
+/* ---------- 3.5 チップ・バッジ ---------- */
+
+/* ひとことヒント。M3のアシストチップに相当する */
+.hint-line {
+  display: block;
+  margin: 0;
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-label-large-size);
+  font-weight: var(--md-sys-typescale-weight-medium);
+  line-height: 1.35;
+  text-align: center;
+}
+
+.hint-line.hint-warn {
+  background: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
+}
+
+.hint-line.hint-ready {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+/* 金は殿堂入りと強敵ボーナスだけ。ふつうのヒントと混ざらないよう枠を持たせる */
+.hint-line.hint-gold {
+  background: var(--app-color-gold-container);
+  color: var(--app-color-on-gold-container);
+  border: 2px solid var(--app-color-gold-outline);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
+}
+
+/* 小さなバッジ（強敵タグなど） */
+.badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: var(--md-sys-shape-corner-full);
+  font-size: var(--md-sys-typescale-label-small-size);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
+  vertical-align: middle;
+}
+
+/* ---------- 3.6 テキストフィールド（アウトライン） ---------- */
+
+.m3-field {
+  font-family: inherit;
+  color: var(--md-sys-color-on-surface);
+  background: var(--md-sys-color-surface-container-lowest);
+  border: 2px solid var(--md-sys-color-outline);
+  border-radius: var(--md-sys-shape-corner-medium);
+  padding: var(--sp-2) var(--sp-3);
+  transition: border-color var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
+}
+
+.m3-field:focus {
+  outline: none;
+  border-color: var(--md-sys-color-primary);
+  border-width: 3px;
+}
+
+/* ---------- 3.7 ダイアログ ---------- */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-5);
+  background: color-mix(in srgb, var(--md-sys-color-scrim) 32%, transparent);
+  animation: scene-in var(--md-sys-motion-duration-short4)
+    var(--md-sys-motion-easing-emphasized-decelerate) both;
+}
+
+.dialog {
+  width: 100%;
+  max-width: 420px;
+  padding: var(--sp-6);
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  box-shadow: var(--md-sys-elevation-level3);
+  text-align: center;
+  animation: pop-in var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-spring) both;
+}
+
+.dialog p {
+  margin: 0 0 var(--sp-6);
+  font-size: var(--md-sys-typescale-headline-small-size);
+  font-weight: var(--md-sys-typescale-weight-bold);
+  line-height: 1.5;
+}
+
+.dialog-buttons {
+  display: flex;
+  gap: var(--sp-3);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.dialog-buttons .btn {
+  flex: 1 1 40%;
+}
+
+/* ---------- 3.8 プログレス ---------- */
+
+/* HPバー。M3のリニアインジケータに合わせて、線ではなく丸い帯にする */
+.hp-bar {
+  position: relative;
+  height: 14px;
+  margin-top: var(--sp-1);
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-surface-container-highest);
+  overflow: hidden;
+}
+
+.hp-fill {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  transform-origin: left center;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-secondary);
+  transition: transform var(--md-sys-motion-duration-long2) var(--md-sys-motion-easing-emphasized),
+    background-color var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard);
+}
+
+/* 残りが減るほど色を変える。半分以下＝金、2割以下＝赤 */
+.hp-fill.mid {
+  background: var(--app-color-gold-outline);
+}
+
+.hp-fill.low {
+  background: var(--md-sys-color-error);
+}
+
+/* 待っているあいだのしるし。
+   M3 Expressive のローディングは「かたちが変わりながら回る」ので、
+   角丸を動かして近い動きを作る */
+.spinner {
+  width: 44px;
+  height: 44px;
+  margin: var(--sp-2) auto;
+  background: var(--md-sys-color-primary);
+  animation: m3-loader 1.8s var(--md-sys-motion-easing-standard) infinite;
+}
+
+@keyframes m3-loader {
+  0% {
+    border-radius: 46% 54% 50% 50% / 50% 46% 54% 50%;
+    transform: rotate(0deg);
+  }
+  33% {
+    border-radius: 54% 46% 60% 40% / 40% 60% 40% 60%;
+    transform: rotate(120deg);
+  }
+  66% {
+    border-radius: 40% 60% 44% 56% / 56% 40% 60% 44%;
+    transform: rotate(240deg);
+  }
+  100% {
+    border-radius: 46% 54% 50% 50% / 50% 46% 54% 50%;
+    transform: rotate(360deg);
+  }
+}
+
+/* 工程の進み具合。今いるところだけ横長のカプセルになる */
+.step-dots {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.step-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-outline-variant);
+  transition: width var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-spring),
+    background-color var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard);
+}
+
+.step-dot.done {
+  background: var(--md-sys-color-secondary);
+}
+
+.step-dot.current {
+  width: 30px;
+  background: var(--md-sys-color-primary);
+}
+
+/* ---------- 3.9 ユーティリティ ---------- */
+
+.row {
+  display: flex;
+  gap: var(--sp-3);
+  align-items: center;
+}
+
+.row-center {
+  justify-content: center;
+}
+
+.grow {
+  flex: 1;
+  min-height: 0;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ============================================================
+   4. 画面ごと
+   ============================================================ */
+
+/* ---------- 4.1 メインメニュー ---------- */
 
 .menu-logo {
-  font-size: clamp(38px, 11vw, 74px);
-  font-weight: 900;
-  color: #fff;
-  text-shadow: 0 4px 0 var(--orange), 0 8px 14px rgba(0, 0, 0, 0.2);
-  margin: 0 0 6px;
-  letter-spacing: 2px;
-  animation: logo-wobble 2.6s ease-in-out infinite;
+  margin: 0 0 var(--sp-2);
+  font-size: var(--md-sys-typescale-display-large-size);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--md-sys-color-primary);
+  text-align: center;
+  animation: logo-wobble 2.6s var(--md-sys-motion-easing-standard) infinite;
 }
 
 @keyframes logo-wobble {
@@ -213,19 +838,20 @@ body {
 }
 
 .menu-sub {
-  font-size: clamp(14px, 4vw, 20px);
-  color: var(--ink);
-  background: rgba(255, 255, 255, 0.75);
-  padding: 8px 18px;
-  border-radius: 999px;
-  margin-bottom: 28px;
+  margin: 0 0 var(--sp-6);
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  font-size: var(--md-sys-typescale-body-large-size);
+  font-weight: var(--md-sys-typescale-weight-medium);
   text-align: center;
 }
 
 .menu-buttons {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: var(--sp-4);
   width: min(420px, 88vw);
 }
 
@@ -234,50 +860,84 @@ body {
 }
 
 .menu-hint {
-  margin-top: 20px;
-  font-size: 14px;
-  color: var(--ink-soft);
+  margin-top: var(--sp-5);
+  font-size: var(--md-sys-typescale-label-medium-size);
+  font-weight: var(--md-sys-typescale-weight-medium);
+  color: var(--md-sys-color-on-surface-variant);
   text-align: center;
 }
 
-/* ---------- オエカキ画面 ---------- */
+.continue-row {
+  display: flex;
+  align-items: stretch;
+  gap: var(--sp-3);
+  width: 100%;
+}
+
+.continue-row .btn {
+  flex: 1;
+  min-width: 0;
+}
+
+.save-thumb-col {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.save-thumb {
+  flex: 0 0 auto;
+  width: 72px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: var(--md-sys-shape-corner-large);
+  background: var(--md-sys-color-surface-container-lowest);
+  border: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.save-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.save-name {
+  /* 名前は最大10文字。1行に収まらないときは2行まで折り返す */
+  max-width: 96px;
+  font-size: var(--md-sys-typescale-label-medium-size);
+  font-weight: var(--md-sys-typescale-weight-bold);
+  line-height: 1.15;
+  color: var(--md-sys-color-on-surface-variant);
+  text-align: center;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- 4.2 オエカキ画面 ---------- */
 
 .draw-header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-3);
   flex-wrap: wrap;
 }
 
-.step-dots {
-  display: flex;
-  gap: 8px;
-}
-
-.step-dot {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.6);
-  border: 3px solid #fff;
-  transition: transform 0.2s ease, background 0.2s ease;
-}
-
-.step-dot.done {
-  background: var(--green);
-}
-
-.step-dot.current {
-  background: var(--orange);
-  transform: scale(1.35);
-}
-
 .draw-title {
-  font-size: clamp(18px, 5vw, 26px);
-  font-weight: 900;
-  color: #fff;
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.15);
   margin: 0;
+  font-size: var(--md-sys-typescale-headline-small-size);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
+  line-height: 1.2;
+  color: var(--md-sys-color-on-surface);
 }
 
 /* ヘッダー内（横並び）のときだけ横方向に伸ばす。
@@ -292,7 +952,7 @@ body {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--sp-3);
   align-items: center;
 }
 
@@ -304,6 +964,8 @@ body {
   min-height: 0;
   width: 100%;
   overflow: hidden;
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  background: var(--md-sys-color-surface-container-lowest);
 }
 
 .paint-canvas {
@@ -319,18 +981,59 @@ body {
   max-width: 720px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.72);
-  border-radius: var(--radius);
-  padding: 8px;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  background: var(--md-sys-color-surface-container);
 }
 
 .tool-row {
   display: flex;
-  gap: 8px;
+  gap: var(--sp-2);
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
+}
+
+/* せまい画面ではボタンの余白と文字を1段落とす。
+   ラベルは折り返さない約束なので、入りきらない分はここで吸収する */
+@media (max-width: 430px) {
+  .btn {
+    padding-inline: var(--sp-3);
+  }
+
+  .btn-huge {
+    padding-inline: var(--sp-2);
+    font-size: var(--md-sys-typescale-title-large-size);
+  }
+
+  .row {
+    gap: var(--sp-2);
+  }
+}
+
+/* いちばん小さい端末（360px幅など）では、
+   横に2つ並べるとラベルが入りきらないので、入らなければ縦に折り返す */
+@media (max-width: 380px) {
+  .row-center {
+    flex-wrap: wrap;
+  }
+
+  .row-center > .btn {
+    flex: 1 1 auto;
+  }
+}
+
+/* せまい画面では道具を1段に収める（7つ並ぶので1つあたりを詰める） */
+@media (max-width: 430px) {
+  .tool-btn {
+    min-width: 44px;
+    font-size: 19px;
+    padding-inline: 2px;
+  }
+  .tool-row {
+    gap: var(--sp-1);
+  }
 }
 
 /* せまい画面では6列×2段。12色を1列に並べると指で押せない大きさになる */
@@ -348,68 +1051,35 @@ body {
   }
 }
 
+/* 色見本は丸。選んだものは面の色を囲む輪で示す */
 .swatch {
   aspect-ratio: 1 / 1;
   min-height: 34px;
-  border-radius: 10px;
-  border: 3px solid rgba(255, 255, 255, 0.9);
-  cursor: pointer;
   padding: 0;
-  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.18);
+  border: none;
+  border-radius: var(--md-sys-shape-corner-full);
+  cursor: pointer;
   touch-action: manipulation;
+  box-shadow: inset 0 0 0 1px var(--md-sys-color-outline-variant);
+  transition: transform var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-spring),
+    box-shadow var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
 }
 
 .swatch.selected {
-  border-color: var(--ink);
-  transform: scale(1.16);
-}
-
-.tool-btn {
-  border: none;
-  background: #fff;
-  border-radius: 14px;
-  min-width: 54px;
-  min-height: 50px;
-  font-size: 22px;
-  font-family: inherit;
-  font-weight: 800;
-  color: var(--ink);
-  cursor: pointer;
-  box-shadow: 0 3px 0 var(--line);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1px;
-  padding: 4px 8px;
-  touch-action: manipulation;
-}
-
-.tool-btn small {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--ink-soft);
-}
-
-.tool-btn.selected {
-  background: var(--yellow);
-  box-shadow: 0 3px 0 #d9ad00;
-}
-
-.tool-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
+  transform: scale(1.12);
+  box-shadow: 0 0 0 3px var(--md-sys-color-surface-container),
+    0 0 0 6px var(--md-sys-color-primary);
 }
 
 .width-dot {
-  border-radius: 50%;
-  background: var(--ink);
+  border-radius: var(--md-sys-shape-corner-full);
+  background: currentColor;
   display: block;
 }
 
 .draw-footer {
   display: flex;
-  gap: 12px;
+  gap: var(--sp-3);
   justify-content: space-between;
   align-items: center;
   width: 100%;
@@ -433,17 +1103,18 @@ body {
   }
 }
 
-/* ---------- 3Dステージ ---------- */
+/* ---------- 4.3 3Dステージ ----------
+   中の絵（空と草原）はゲームの画作りそのものなので、色はそのまま残す。
+   面のかたちだけ M3 のシェイプに合わせる。                            */
 
 .stage3d {
   position: relative;
   flex: 1;
   min-height: 0;
   width: 100%;
-  border-radius: var(--radius);
   overflow: hidden;
+  border-radius: var(--md-sys-shape-corner-extra-large);
   background: linear-gradient(180deg, #bfe9ff 0%, #e8f7d4 72%, #cdeaa5 100%);
-  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.08);
 }
 
 .stage3d canvas {
@@ -453,48 +1124,94 @@ body {
   touch-action: none;
 }
 
+/* 使い方の小さな案内。M3のツールチップと同じ反転色 */
 .stage-hint {
   position: absolute;
   left: 50%;
-  bottom: 6px;
+  bottom: var(--sp-2);
   transform: translateX(-50%);
-  font-size: 12px;
-  font-weight: 700;
-  color: rgba(59, 50, 38, 0.65);
-  background: rgba(255, 255, 255, 0.7);
-  padding: 3px 12px;
-  border-radius: 999px;
-  pointer-events: none;
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-inverse-surface);
+  color: var(--md-sys-color-inverse-on-surface);
+  font-size: var(--md-sys-typescale-label-small-size);
+  font-weight: var(--md-sys-typescale-weight-medium);
   white-space: nowrap;
+  pointer-events: none;
 }
 
-/* ---------- プレビュー画面 ---------- */
+/* ---------- 4.4 プレビュー画面 ---------- */
 
 .preview-layout {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--sp-3);
+}
+
+.stage-group {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 下辺の角丸を落として操作パネルとひとかたまりに見せる */
+.stage3d-attached {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.action-panel {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: var(--sp-2);
+  border-bottom-left-radius: var(--md-sys-shape-corner-extra-large);
+  border-bottom-right-radius: var(--md-sys-shape-corner-extra-large);
+  background: var(--md-sys-color-surface-container);
+}
+
+.action-panel-title {
+  font-size: var(--md-sys-typescale-label-medium-size);
+  font-weight: var(--md-sys-typescale-weight-bold);
+  color: var(--md-sys-color-on-surface-variant);
+  text-align: center;
+}
+
+.action-row {
+  display: flex;
+  gap: var(--sp-2);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* 4つとも同じトーナル。色分けをやめて「同じ種類の操作」だと分かるようにする */
+.action-row .btn {
+  flex: 1 1 0;
+  min-width: 84px;
+  min-height: 48px;
+  padding: var(--sp-2) var(--sp-2);
+  font-size: var(--md-sys-typescale-label-medium-size);
 }
 
 .stat-panel {
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: var(--radius);
-  padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  /* 影も枠も付けない = 押せないもの、という約束 */
-  box-shadow: none;
+  gap: var(--sp-1);
+  padding: var(--sp-3);
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  background: var(--md-sys-color-surface-container-low);
 }
 
 .stat-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: clamp(14px, 3.6vw, 18px);
-  font-weight: 800;
+  gap: var(--sp-2);
+  font-size: var(--md-sys-typescale-title-medium-size);
+  font-weight: var(--md-sys-typescale-weight-bold);
 }
 
 .stat-label {
@@ -505,48 +1222,24 @@ body {
 
 .stars {
   letter-spacing: 1px;
-  font-size: clamp(15px, 4vw, 20px);
-  color: var(--orange);
+  font-size: var(--md-sys-typescale-title-large-size);
+  color: var(--md-sys-color-primary);
 }
 
 .stat-value {
   margin-left: auto;
   font-variant-numeric: tabular-nums;
-  color: var(--ink-soft);
-  font-size: 0.9em;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-medium-size);
 }
 
 /* 属性も他のステータスと同じ「情報」として並べる（ボタンに見せない） */
 .stat-element {
   margin-left: auto;
-  font-weight: 900;
-  font-size: clamp(14px, 3.6vw, 18px);
-  color: var(--ink);
+  font-size: var(--md-sys-typescale-title-medium-size);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
+  color: var(--md-sys-color-on-surface);
   white-space: nowrap;
-}
-
-.hint-line {
-  text-align: center;
-  font-size: clamp(12px, 3.4vw, 15px);
-  color: var(--ink);
-  background: var(--yellow);
-  border-radius: 999px;
-  padding: 6px 14px;
-  font-weight: 700;
-}
-
-.action-row {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.action-row .btn {
-  flex: 1 1 0;
-  min-width: 84px;
-  font-size: clamp(14px, 3.6vw, 18px);
-  padding: 10px 8px;
 }
 
 @media (orientation: landscape) and (min-width: 780px) {
@@ -558,12 +1251,30 @@ body {
     flex: 0 0 320px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--sp-2);
     overflow-y: auto;
   }
 }
 
-/* ---------- ルーレット画面 ---------- */
+/* せまい画面では2×2に揃える（3+1の半端な折返しを避ける） */
+@media (max-width: 620px) {
+  .action-panel .action-row .btn {
+    flex: 1 1 42%;
+  }
+
+  .draw-footer .btn {
+    padding: var(--sp-3) var(--sp-4);
+  }
+}
+
+/* ---------- 4.5 ルーレット画面 ---------- */
+
+.streak-banner {
+  text-align: center;
+  font-size: var(--md-sys-typescale-title-large-size);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
+  color: var(--md-sys-color-primary);
+}
 
 .wheel-wrap {
   position: relative;
@@ -594,45 +1305,34 @@ body {
   transform: translateX(-50%);
   font-size: 42px;
   line-height: 1;
-  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.3));
+  filter: drop-shadow(0 3px 3px rgba(56, 46, 39, 0.3));
   z-index: 5;
   pointer-events: none;
 }
 
-.streak-banner {
-  text-align: center;
-  font-size: clamp(16px, 4.5vw, 22px);
-  font-weight: 900;
-  color: #fff;
-  text-shadow: 0 3px 0 var(--orange);
-}
-
 .enemy-card {
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: var(--radius);
-  padding: 10px 16px;
   display: flex;
   align-items: center;
-  gap: 12px;
   justify-content: center;
+  gap: var(--sp-3);
   flex-wrap: wrap;
-  animation: pop-in 0.35s cubic-bezier(0.2, 1.4, 0.5, 1) both;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  background: var(--md-sys-color-surface-container-low);
+  box-shadow: var(--md-sys-elevation-level1);
+  animation: pop-in var(--md-sys-motion-duration-medium4) var(--md-sys-motion-easing-spring) both;
 }
 
-@keyframes pop-in {
-  from {
-    transform: scale(0.6);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
+/* 強敵は金の枠で別格に見せる */
+.enemy-card.strong {
+  background: var(--app-color-gold-container);
+  color: var(--app-color-on-gold-container);
+  box-shadow: var(--md-sys-elevation-level2);
 }
 
 .enemy-card .enemy-name {
-  font-size: clamp(20px, 5.5vw, 30px);
-  font-weight: 900;
+  font-size: var(--md-sys-typescale-headline-small-size);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
 }
 
 .enemy-card img {
@@ -645,88 +1345,126 @@ body {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--ink-soft);
+  font-size: var(--md-sys-typescale-body-medium-size);
+  font-weight: var(--md-sys-typescale-weight-medium);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
-/* ---------- 戦闘画面 ---------- */
+.enemy-card.strong .enemy-meta {
+  color: var(--app-color-on-gold-container);
+}
+
+.strong-tag {
+  display: inline-block;
+  margin-left: var(--sp-2);
+  padding: 2px 10px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--app-color-on-gold-container);
+  color: var(--app-color-gold-container);
+  font-size: var(--md-sys-typescale-label-small-size);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
+  vertical-align: middle;
+}
+
+/* 相性が悪い相手のときの注意。M3のエラーコンテナで出す */
+.warn-banner {
+  margin-bottom: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--md-sys-shape-corner-large);
+  background: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
+  text-align: center;
+  font-size: var(--md-sys-typescale-title-medium-size);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
+  animation: warn-pulse 0.9s var(--md-sys-motion-easing-standard) infinite alternate;
+}
+
+.warn-banner small {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--md-sys-typescale-label-medium-size);
+  font-weight: var(--md-sys-typescale-weight-medium);
+}
+
+@keyframes warn-pulse {
+  from {
+    filter: brightness(1);
+  }
+  to {
+    filter: brightness(1.06);
+  }
+}
+
+/* ---------- 4.6 戦闘画面 ---------- */
 
 .battle-top {
   display: flex;
-  gap: 10px;
+  gap: var(--sp-3);
   align-items: flex-start;
+  /* 右上に固定しているおとのボタンと重ならないよう場所を空ける */
+  padding-right: 52px;
+}
+
+@media (min-width: 620px) {
+  .battle-top {
+    padding-right: 56px;
+  }
 }
 
 .fighter-box {
   flex: 1;
   min-width: 0;
-  background: rgba(255, 255, 255, 0.85);
-  border-radius: 14px;
-  padding: 6px 10px;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--md-sys-shape-corner-large);
+  background: var(--md-sys-color-surface-container-low);
 }
 
 .fighter-name {
-  font-size: clamp(13px, 3.6vw, 17px);
-  font-weight: 900;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-1);
+  font-size: var(--md-sys-typescale-title-small-size);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.hp-bar {
-  position: relative;
-  height: 16px;
-  background: #e6e0d4;
-  border-radius: 999px;
-  overflow: hidden;
-  margin-top: 4px;
-}
-
-.hp-fill {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  transform-origin: left center;
-  background: var(--green);
-  border-radius: 999px;
-  transition: transform 0.45s ease, background 0.45s ease;
-}
-
 .hp-num {
-  font-size: 12px;
-  color: var(--ink-soft);
+  margin-top: 2px;
+  font-size: var(--md-sys-typescale-label-small-size);
+  font-weight: var(--md-sys-typescale-weight-medium);
+  color: var(--md-sys-color-on-surface-variant);
   font-variant-numeric: tabular-nums;
   text-align: right;
-  margin-top: 2px;
 }
 
+/* 実況の帯。読ませたい文字なので面をひとつ持ち上げる */
 .msg-band {
   min-height: 62px;
-  background: rgba(255, 255, 255, 0.92);
-  border-radius: var(--radius);
-  border: 4px solid #fff;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
   text-align: center;
-  padding: 8px 14px;
-  font-size: clamp(16px, 4.4vw, 24px);
-  font-weight: 900;
+  font-size: var(--md-sys-typescale-headline-small-size);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
 }
 
+/* ダメージの数字はステージ（明るい絵）の上に出るので、
+   色は error、まわりを白で縁取って読めるようにする */
 .dmg-pop {
   position: absolute;
-  font-size: clamp(30px, 8vw, 52px);
-  font-weight: 900;
-  color: #fff;
-  text-shadow: 0 0 6px #000, 0 3px 0 var(--red-dark);
-  pointer-events: none;
-  animation: dmg-float 0.95s ease-out forwards;
   z-index: 10;
+  font-size: clamp(30px, 8vw, 52px);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
+  color: var(--md-sys-color-error);
+  text-shadow: 0 0 4px #fff, 0 0 8px #fff, 0 2px 0 #fff;
+  pointer-events: none;
+  animation: dmg-float 0.95s var(--md-sys-motion-easing-emphasized-decelerate) forwards;
 }
 
 @keyframes dmg-float {
@@ -744,28 +1482,50 @@ body {
   }
 }
 
-.effect-tag {
+.dmg-pop.crit {
+  font-size: clamp(38px, 10vw, 68px);
+  color: var(--app-color-on-gold-container);
+  text-shadow: 0 0 4px var(--app-color-gold-container), 0 0 10px #fff, 0 2px 0 #fff;
+}
+
+/* 「ばつぐん」「ガード」「会心」が同時に出ても重ならないよう縦に積む */
+.tag-stack {
   position: absolute;
+  top: 10%;
   left: 50%;
-  top: 16%;
   transform: translateX(-50%);
-  font-size: clamp(18px, 5vw, 28px);
-  font-weight: 900;
-  color: #fff;
-  background: var(--red);
-  padding: 6px 18px;
-  border-radius: 999px;
-  box-shadow: var(--shadow);
-  animation: pop-in 0.3s cubic-bezier(0.2, 1.4, 0.5, 1) both;
-  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-1);
+  pointer-events: none;
+  z-index: 12;
+}
+
+.effect-tag {
+  padding: var(--sp-1) var(--sp-4);
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-error);
+  color: var(--md-sys-color-on-error);
+  font-size: var(--md-sys-typescale-title-large-size);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
   white-space: nowrap;
+  box-shadow: var(--md-sys-elevation-level2);
+  animation: pop-in var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-spring) both;
 }
 
 .effect-tag.weak {
-  background: var(--blue);
+  background: var(--md-sys-color-tertiary);
+  color: var(--md-sys-color-on-tertiary);
 }
 
-/* 光りかたで目立たせる。大きさは変えない
+.effect-tag.crit {
+  background: var(--app-color-gold-container);
+  color: var(--app-color-on-gold-container);
+}
+
+/* 必殺技ボタン＝拡張FAB。
+   光りかたで目立たせる。大きさは変えない
    ―― 3歳児が指で狙うボタンなので、当たり判定が動かないようにする */
 .special-btn {
   position: absolute;
@@ -773,20 +1533,26 @@ body {
   bottom: 8%;
   transform: translateX(-50%);
   z-index: 20;
-  background: linear-gradient(180deg, #ff5f6d, #ffc371);
-  animation: special-pulse 0.7s ease-in-out infinite alternate;
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border-radius: var(--md-sys-shape-corner-extra-large);
   white-space: nowrap;
   pointer-events: auto;
+  animation: special-pulse 0.8s var(--md-sys-motion-easing-standard) infinite alternate;
+}
+
+.special-btn:active:not(:disabled) {
+  /* 中央そろえの transform を消さないよう、押したときも位置を保つ */
+  transform: translateX(-50%) scale(0.96);
+  border-radius: var(--md-sys-shape-corner-large);
 }
 
 @keyframes special-pulse {
   from {
-    box-shadow: 0 6px 0 #c0392b, 0 0 14px rgba(255, 120, 60, 0.55);
-    filter: brightness(1);
+    box-shadow: var(--md-sys-elevation-level3);
   }
   to {
-    box-shadow: 0 6px 0 #c0392b, 0 0 54px rgba(255, 190, 80, 1);
-    filter: brightness(1.14);
+    box-shadow: var(--md-sys-elevation-level3), 0 0 34px 6px color-mix(in srgb, var(--md-sys-color-primary) 55%, transparent);
   }
 }
 
@@ -800,12 +1566,13 @@ body {
 }
 
 .flash-white.on {
-  animation: flash 0.5s ease-out;
+  animation: flash var(--md-sys-motion-duration-long2) var(--md-sys-motion-easing-emphasized-accelerate);
 }
 
 /* 会心は10%で頻繁に出るので、必殺技より控えめに光らせる */
 .flash-white.on.soft {
-  animation: flash-soft 0.4s ease-out;
+  animation: flash-soft var(--md-sys-motion-duration-medium4)
+    var(--md-sys-motion-easing-emphasized-accelerate);
 }
 
 @keyframes flash {
@@ -826,317 +1593,7 @@ body {
   }
 }
 
-/* ---------- リザルト画面 ---------- */
-
-.result-title {
-  font-size: clamp(30px, 9vw, 62px);
-  font-weight: 900;
-  color: #fff;
-  text-shadow: 0 4px 0 var(--orange), 0 8px 14px rgba(0, 0, 0, 0.22);
-  text-align: center;
-  margin: 0;
-  animation: pop-in 0.45s cubic-bezier(0.2, 1.4, 0.5, 1) both;
-}
-
-.result-title.lose {
-  text-shadow: 0 4px 0 var(--blue-dark), 0 8px 14px rgba(0, 0, 0, 0.22);
-}
-
-.result-sub {
-  text-align: center;
-  font-size: clamp(15px, 4vw, 20px);
-  font-weight: 800;
-  color: var(--ink);
-  background: rgba(255, 255, 255, 0.8);
-  border-radius: 999px;
-  padding: 8px 18px;
-  margin: 0 auto;
-}
-
-.up-value {
-  color: var(--green-dark);
-  font-weight: 900;
-}
-
-.trophy {
-  font-size: clamp(58px, 18vw, 120px);
-  text-align: center;
-  animation: logo-wobble 2s ease-in-out infinite;
-}
-
-.confetti {
-  position: absolute;
-  top: -20px;
-  width: 12px;
-  height: 18px;
-  opacity: 0.95;
-  animation: fall linear forwards;
-  pointer-events: none;
-  z-index: 30;
-}
-
-@keyframes fall {
-  to {
-    transform: translateY(105vh) rotate(760deg);
-  }
-}
-
-/* ---------- ダイアログ ---------- */
-
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(30, 24, 16, 0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-  padding: 20px;
-  animation: scene-in 0.18s ease-out both;
-}
-
-.dialog {
-  background: var(--cream);
-  border-radius: 24px;
-  padding: 24px 22px;
-  max-width: 420px;
-  width: 100%;
-  text-align: center;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
-}
-
-.dialog p {
-  font-size: clamp(17px, 4.6vw, 22px);
-  font-weight: 800;
-  margin: 0 0 20px;
-  line-height: 1.5;
-}
-
-.dialog-buttons {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.dialog-buttons .btn {
-  flex: 1 1 40%;
-}
-
-/* ---------- ユーティリティ ---------- */
-
-.row {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.row-center {
-  justify-content: center;
-}
-
-.grow {
-  flex: 1;
-  min-height: 0;
-}
-
-.hidden {
-  display: none !important;
-}
-
-.spinner-note {
-  text-align: center;
-  font-weight: 800;
-  color: #fff;
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.2);
-}
-
-
-/* ============================================================
-   第2版で追加したもの
-   ============================================================ */
-
-/* ---------- メニューの絵プレビュー ---------- */
-
-.continue-row {
-  display: flex;
-  align-items: stretch;
-  gap: 10px;
-  width: 100%;
-}
-
-.continue-row .btn {
-  flex: 1;
-  min-width: 0;
-}
-
-.save-thumb {
-  flex: 0 0 auto;
-  width: 72px;
-  height: 72px;
-  border-radius: 16px;
-  background: var(--cream);
-  border: 3px solid #fff;
-  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.12);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.save-thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  display: block;
-}
-
-/* ---------- オエカキの警告表示 ---------- */
-
-.hint-line.hint-warn {
-  background: var(--red);
-  color: #fff;
-}
-
-/* ---------- プレビュー: 3Dステージと操作パネルの連結 ---------- */
-
-.stage-group {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-/* 下辺の角丸を落として操作パネルとひとかたまりに見せる */
-.stage3d-attached {
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
-}
-
-.action-panel {
-  flex: 0 0 auto;
-  background: rgba(255, 255, 255, 0.82);
-  border-bottom-left-radius: var(--radius);
-  border-bottom-right-radius: var(--radius);
-  padding: 6px 8px 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.action-panel-title {
-  font-size: 12px;
-  font-weight: 800;
-  color: var(--ink-soft);
-  text-align: center;
-}
-
-/* 4つとも同じ色。色分けをやめて「同じ種類の操作」だと分かるようにする */
-.action-btn {
-  background: var(--blue);
-  box-shadow: 0 4px 0 var(--blue-dark);
-}
-
-/* せまい画面では2×2に揃える（3+1の半端な折返しを避ける） */
-@media (max-width: 620px) {
-  .action-panel .action-row .btn {
-    flex: 1 1 42%;
-  }
-
-  .draw-footer .btn {
-    font-size: clamp(14px, 3.8vw, 18px);
-    padding: 12px 14px;
-  }
-}
-
-.action-btn:active:not(:disabled) {
-  box-shadow: 0 1px 0 var(--blue-dark);
-}
-
-/* ---------- ルーレット: 強敵と相性警告 ---------- */
-
-.enemy-card.strong {
-  border: 4px solid var(--yellow);
-}
-
-.strong-tag {
-  display: inline-block;
-  margin-left: 8px;
-  font-size: 12px;
-  font-weight: 900;
-  color: #7a5a00;
-  background: var(--yellow);
-  border-radius: 999px;
-  padding: 2px 10px;
-  vertical-align: middle;
-}
-
-.warn-banner {
-  background: var(--red);
-  color: #fff;
-  border-radius: var(--radius);
-  padding: 8px 14px;
-  margin-bottom: 8px;
-  text-align: center;
-  font-weight: 900;
-  font-size: clamp(15px, 4vw, 19px);
-  box-shadow: var(--shadow);
-  animation: warn-pulse 0.9s ease-in-out infinite alternate;
-}
-
-.warn-banner small {
-  display: block;
-  font-size: 12px;
-  font-weight: 700;
-  margin-top: 2px;
-  opacity: 0.95;
-}
-
-@keyframes warn-pulse {
-  from {
-    filter: brightness(1);
-  }
-  to {
-    filter: brightness(1.18);
-  }
-}
-
-/* ---------- 戦闘: タグの積み上げ ---------- */
-
-/* 「ばつぐん」「ガード」「会心」が同時に出ても重ならないよう縦に積む */
-.tag-stack {
-  position: absolute;
-  top: 10%;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  pointer-events: none;
-  z-index: 12;
-}
-
-.tag-stack .effect-tag {
-  position: static;
-  transform: none;
-  left: auto;
-  top: auto;
-}
-
-.effect-tag.crit {
-  background: #ffb020;
-  color: #3b2500;
-}
-
-/* ---------- 戦闘: 会心の一撃 ---------- */
-
-.dmg-pop.crit {
-  color: #fff3b0;
-  font-size: clamp(38px, 10vw, 68px);
-  text-shadow: 0 0 8px #b34700, 0 4px 0 #7a2f00;
-}
-
+/* 会心のカットイン */
 .cutin {
   position: absolute;
   left: 0;
@@ -1146,19 +1603,24 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(100deg, #ff5f6d 0%, #ffb020 50%, #ff5f6d 100%);
-  box-shadow: 0 0 40px rgba(255, 140, 0, 0.9);
+  background: linear-gradient(
+    100deg,
+    var(--md-sys-color-primary) 0%,
+    var(--app-color-gold-outline) 50%,
+    var(--md-sys-color-primary) 100%
+  );
+  box-shadow: var(--md-sys-elevation-level4);
   transform: skewY(-4deg);
   z-index: 25;
   pointer-events: none;
-  animation: cutin-sweep 0.7s ease-out both;
+  animation: cutin-sweep var(--md-sys-motion-duration-extra-long2)
+    var(--md-sys-motion-easing-emphasized) both;
 }
 
 .cutin span {
-  font-size: clamp(20px, 6vw, 36px);
-  font-weight: 900;
-  color: #fff;
-  text-shadow: 0 3px 0 #b34700;
+  font-size: var(--md-sys-typescale-headline-medium-size);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
+  color: var(--md-sys-color-on-primary);
   white-space: nowrap;
   transform: skewY(4deg);
 }
@@ -1182,25 +1644,63 @@ body {
   }
 }
 
+/* ---------- 4.7 リザルト画面 ---------- */
 
-/* ============================================================
-   第3版で追加したもの
-   ============================================================ */
-
-/* ---------- リザルト: 強敵ボーナスの表示 ---------- */
-
-.hint-line.hint-gold {
-  /* 通常の +20%/+10% と同じ黄色だと差が伝わらないので、賞状と同じ金にする */
-  background: linear-gradient(180deg, #fff6c8 0%, #f6e27a 45%, #e8b93a 55%, #ffe98a 100%);
-  color: #4a3b12;
-  border: 3px solid #b8901c;
-  font-size: clamp(14px, 4vw, 19px);
-  font-weight: 900;
-  padding: 8px 16px;
-  box-shadow: 0 4px 0 rgba(184, 144, 28, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+.result-title {
+  margin: 0;
+  text-align: center;
+  font-size: var(--md-sys-typescale-display-medium-size);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
+  line-height: 1.1;
+  color: var(--md-sys-color-primary);
+  animation: pop-in var(--md-sys-motion-duration-medium4) var(--md-sys-motion-easing-spring) both;
 }
 
-/* ---------- 殿堂入り画面 ---------- */
+.result-title.lose {
+  color: var(--md-sys-color-tertiary);
+}
+
+.result-sub {
+  margin: 0 auto;
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface-variant);
+  text-align: center;
+  font-size: var(--md-sys-typescale-title-medium-size);
+  font-weight: var(--md-sys-typescale-weight-bold);
+}
+
+.up-value {
+  color: var(--md-sys-color-secondary);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
+}
+
+.trophy {
+  font-size: clamp(58px, 18vw, 120px);
+  text-align: center;
+  animation: logo-wobble 2s var(--md-sys-motion-easing-standard) infinite;
+}
+
+.confetti {
+  position: absolute;
+  top: -20px;
+  width: 12px;
+  height: 18px;
+  border-radius: var(--md-sys-shape-corner-extra-small);
+  opacity: 0.95;
+  animation: fall linear forwards;
+  pointer-events: none;
+  z-index: 30;
+}
+
+@keyframes fall {
+  to {
+    transform: translateY(105vh) rotate(760deg);
+  }
+}
+
+/* ---------- 4.8 殿堂入り画面 ---------- */
 
 .photo-wrap {
   flex: 1;
@@ -1209,7 +1709,7 @@ body {
   align-items: center;
   justify-content: center;
   /* 賞状の外側にも余白を見せて「写真」らしくする */
-  padding: 4px;
+  padding: var(--sp-1);
 }
 
 .photo-preview {
@@ -1218,25 +1718,24 @@ body {
   /* 記念写真は正方形。縦横どちらが詰まっても歪ませない */
   aspect-ratio: 1 / 1;
   object-fit: contain;
-  border-radius: 12px;
-  background: var(--cream);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
   display: block;
+  border-radius: var(--md-sys-shape-corner-large);
+  background: var(--md-sys-color-surface-container-lowest);
+  box-shadow: var(--md-sys-elevation-level3);
 }
 
 .name-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-3);
   justify-content: center;
   flex-wrap: wrap;
 }
 
 .name-label {
-  font-size: clamp(14px, 3.8vw, 18px);
-  font-weight: 900;
-  color: #fff;
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+  font-size: var(--md-sys-typescale-title-medium-size);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .name-input {
@@ -1244,116 +1743,67 @@ body {
   min-width: 0;
   max-width: 14em;
   font-family: inherit;
-  font-size: clamp(18px, 5vw, 26px);
-  font-weight: 900;
+  font-size: var(--md-sys-typescale-headline-small-size);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
   text-align: center;
-  color: var(--ink);
-  background: #fff;
-  border: 3px solid var(--orange);
-  border-radius: 14px;
-  padding: 8px 10px;
-  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.12);
+  color: var(--md-sys-color-on-surface);
+  background: var(--md-sys-color-surface-container-lowest);
+  border: 2px solid var(--md-sys-color-outline);
+  border-radius: var(--md-sys-shape-corner-medium);
+  padding: var(--sp-2) var(--sp-3);
+  transition: border-color var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
 }
 
 .name-input:focus {
   outline: none;
-  border-color: var(--green-dark);
-  box-shadow: 0 0 0 4px rgba(67, 194, 107, 0.35);
+  border-color: var(--md-sys-color-primary);
+  border-width: 3px;
 }
 
-/* ---------- メニュー: 保存した絵の名前 ---------- */
+/* ---------- 4.9 対人マッチング画面 ---------- */
 
-.save-thumb-col {
-  flex: 0 0 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.save-name {
-  /* 名前は最大10文字。1行に収まらないときは2行まで折り返す */
-  max-width: 96px;
-  font-size: 12px;
-  line-height: 1.15;
-  font-weight: 900;
-  color: #fff;
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.28);
+.spinner-note {
   text-align: center;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  overflow-wrap: anywhere;
+  font-size: var(--md-sys-typescale-title-medium-size);
+  font-weight: var(--md-sys-typescale-weight-bold);
+  color: var(--md-sys-color-on-surface-variant);
 }
-
-
-/* ============================================================
-   第4版で追加したもの（オンラインたいせん）
-   ============================================================ */
-
-/* ---------- 共通 ---------- */
-
-.spinner {
-  width: 44px;
-  height: 44px;
-  margin: 8px auto;
-  border-radius: 50%;
-  border: 6px solid rgba(255, 255, 255, 0.5);
-  border-top-color: var(--orange);
-  animation: spin 0.9s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.hint-line.hint-ready {
-  background: var(--green);
-  color: #fff;
-}
-
-/* ---------- 対人マッチング画面 ---------- */
 
 .match-body {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 12px;
+  gap: var(--sp-3);
   min-height: 0;
 }
 
 .match-lead {
-  text-align: center;
-  font-size: clamp(15px, 4vw, 20px);
-  font-weight: 900;
-  color: #fff;
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
   margin: 0;
+  text-align: center;
+  font-size: var(--md-sys-typescale-title-large-size);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
+  color: var(--md-sys-color-on-surface);
 }
 
 .match-note {
-  text-align: center;
-  font-size: clamp(11px, 3vw, 14px);
-  font-weight: 700;
-  color: var(--ink-soft);
   margin: 0;
+  text-align: center;
+  font-size: var(--md-sys-typescale-body-medium-size);
+  font-weight: var(--md-sys-typescale-weight-medium);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 /* つながらなかったときの手がかり。読み上げ・コピーできるようにしておく */
 .match-note.diag {
-  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  font-size: clamp(12px, 3.2vw, 15px);
-  letter-spacing: 0.02em;
-  color: var(--ink);
-  background: rgba(255, 255, 255, 0.85);
-  border-radius: 10px;
-  padding: 6px 10px;
-  margin: 0 auto;
   max-width: 22em;
+  margin: 0 auto;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--md-sys-shape-corner-small);
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--md-ref-typeface-mono);
+  font-size: var(--md-sys-typescale-body-medium-size);
+  letter-spacing: 0.02em;
   user-select: all;
   -webkit-user-select: all;
 }
@@ -1361,7 +1811,7 @@ body {
 .match-choice {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--sp-3);
   align-items: stretch;
 }
 
@@ -1377,16 +1827,13 @@ body {
   flex: 0 1 auto;
   min-width: clamp(34px, 11vw, 62px);
   padding: clamp(6px, 2vw, 12px) 0;
-  border-radius: 12px;
-  background: #fff;
-  border: 3px solid var(--orange);
-  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.12);
-  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  font-family: var(--md-ref-typeface-mono);
   font-size: clamp(24px, 8vw, 44px);
-  font-weight: 900;
-  color: var(--ink);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
   text-align: center;
-  letter-spacing: 0;
 }
 
 .code-inputs {
@@ -1398,99 +1845,115 @@ body {
 .code-input {
   width: clamp(38px, 12vw, 64px);
   padding: clamp(6px, 2vw, 12px) 0;
-  border-radius: 12px;
-  background: #fff;
-  border: 3px solid var(--orange);
-  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.12);
-  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  border: 2px solid var(--md-sys-color-outline);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-surface-container-lowest);
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--md-ref-typeface-mono);
   font-size: clamp(22px, 7vw, 40px);
-  font-weight: 900;
-  color: var(--ink);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
   text-align: center;
   text-transform: uppercase;
+  transition: border-color var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
 }
 
 .code-input:focus {
   outline: none;
-  border-color: var(--green-dark);
-  box-shadow: 0 0 0 4px rgba(67, 194, 107, 0.35);
+  border-color: var(--md-sys-color-primary);
+  border-width: 3px;
 }
 
 .versus-labels {
   display: flex;
   align-items: center;
   justify-content: space-around;
-  font-size: clamp(14px, 4vw, 19px);
-  font-weight: 900;
-  color: #fff;
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+  font-size: var(--md-sys-typescale-title-medium-size);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
+  color: var(--md-sys-color-on-surface);
 }
 
 .versus-vs {
-  color: var(--yellow);
-  font-size: clamp(16px, 5vw, 24px);
+  color: var(--md-sys-color-primary);
+  font-size: var(--md-sys-typescale-title-large-size);
 }
 
-/* ---------- 戦略画面 ---------- */
+/* 実機デバッグ用の通信ログ。反転色で「開発用」だと分かるようにする */
+.netlog {
+  display: none;
+  margin: 0;
+  max-height: 34vh;
+  overflow: auto;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-inverse-surface);
+  color: var(--md-sys-color-inverse-on-surface);
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: all;
+  -webkit-user-select: all;
+}
 
-/* ---------- 戦略画面: ぞくせいの関係の図 ----------
+.netlog.on {
+  display: block;
+}
 
-   色で意味を分けると3歳児には読み取れないので、
-   クリーム〜タンの同系色だけで面を作り、文字はすべて黒に近い墨色で置く。
-   目立たせたいのは「オススメ」の吹き出しひとつだけ。                     */
+/* ---------- 4.10 戦略画面 ----------
+
+   ぞくせいの図は「色で意味を分けない」方針。
+   M3でいうと、面はニュートラルなサーフェス階層だけを使い、
+   色を持たせるのは「オススメ」の吹き出しひとつ（primary）だけ、という形。   */
 
 .strategy-hint {
-  color: #fff;
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .elem-panel {
-  padding: clamp(8px, 2vh, 12px) clamp(8px, 3vw, 14px);
-  border: 2px solid #e0d2b6;
-  border-radius: 18px;
-  background: #f7f1e4;
-  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.12);
+  padding: var(--sp-3);
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  background: var(--md-sys-color-surface-container);
 }
 
 .elem-panel-title {
-  margin: 0 0 6px;
-  font-size: clamp(12px, 3.2vw, 15px);
-  font-weight: 900;
-  color: var(--ink);
+  margin: 0 0 var(--sp-2);
+  font-size: var(--md-sys-typescale-label-large-size);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
   letter-spacing: 0.04em;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .elem-cards {
   display: flex;
-  gap: clamp(6px, 2vw, 10px);
+  gap: var(--sp-2);
 }
 
 .elem-card {
   flex: 1 1 0;
   min-width: 0;
-  padding: clamp(6px, 1.6vh, 9px) 6px;
-  border: 1px solid #e4d7bd;
-  border-radius: 14px;
-  background: var(--cream);
+  padding: var(--sp-2) var(--sp-2);
+  border-radius: var(--md-sys-shape-corner-large);
+  background: var(--md-sys-color-surface-container-lowest);
 }
 
 .elem-card-head {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  margin: 0 0 5px;
-  font-size: clamp(11px, 3vw, 13px);
-  font-weight: 900;
-  color: var(--ink);
+  gap: var(--sp-1);
+  margin: 0 0 var(--sp-1);
+  font-size: var(--md-sys-typescale-label-large-size);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
+  color: var(--md-sys-color-on-surface);
 }
 
 .elem-thumb {
   width: 22px;
   height: 22px;
-  border-radius: 6px;
-  border: 1px solid #e0d2b6;
-  background: #fff;
+  border-radius: var(--md-sys-shape-corner-small);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  background: var(--md-sys-color-surface-container-lowest);
   object-fit: contain;
 }
 
@@ -1499,7 +1962,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: var(--sp-1);
 }
 
 .elem-slot {
@@ -1510,9 +1973,9 @@ body {
 }
 
 .elem-slot-owner {
-  font-size: clamp(8px, 2.2vw, 10px);
-  font-weight: 900;
-  color: #7d6d52;
+  font-size: var(--md-sys-typescale-label-small-size);
+  font-weight: var(--md-sys-typescale-weight-bold);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .elem-chip {
@@ -1520,17 +1983,17 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 1px;
-  padding: 4px 5px;
-  border-radius: 11px;
-  border: 2px solid #dccdae;
-  background: #efe5d0;
-  color: var(--ink);
+  padding: var(--sp-1) 5px;
+  border-radius: var(--md-sys-shape-corner-medium);
+  border: 2px solid var(--md-sys-color-outline-variant);
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
 }
 
-/* まもりの側は面をへこませて、こうげきの手と役割を分ける */
+/* まもりの側は枠を破線にして、こうげきの手と役割を分ける */
 .elem-chip.guard {
   border-style: dashed;
-  background: #fbf6ea;
+  background: var(--md-sys-color-surface-container-low);
 }
 
 .elem-chip.has-tip {
@@ -1543,8 +2006,8 @@ body {
 }
 
 .elem-chip-name {
-  font-size: clamp(10px, 2.7vw, 12px);
-  font-weight: 900;
+  font-size: var(--md-sys-typescale-label-medium-size);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
 }
 
 .elem-arrow {
@@ -1553,35 +2016,36 @@ body {
   align-items: center;
   /* 下の持ち主ラベルのぶんだけ、絵札の中心に合わせて上げる */
   margin-bottom: 14px;
-  color: #7d6d52;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .elem-arrow-mark {
-  font-size: clamp(13px, 3.6vw, 17px);
+  font-size: var(--md-sys-typescale-title-small-size);
   line-height: 1;
 }
 
 .elem-arrow-note {
-  font-size: clamp(9px, 2.4vw, 11px);
-  font-weight: 900;
+  font-size: var(--md-sys-typescale-label-small-size);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
 }
 
 .elem-note {
-  margin: 5px 0 0;
-  font-size: clamp(10px, 2.7vw, 12px);
-  font-weight: 700;
+  margin: var(--sp-1) 0 0;
+  font-size: var(--md-sys-typescale-body-small-size);
+  font-weight: var(--md-sys-typescale-weight-medium);
   line-height: 1.35;
-  color: var(--ink);
+  color: var(--md-sys-color-on-surface);
 }
 
 .elem-caution {
-  margin: 6px 0 0;
-  font-size: clamp(9px, 2.5vw, 11px);
-  font-weight: 700;
-  color: #6f6047;
+  margin: var(--sp-2) 0 0;
+  font-size: var(--md-sys-typescale-label-small-size);
+  font-weight: var(--md-sys-typescale-weight-medium);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
-/* 電球つきの丸い吹き出し。オススメの手にだけ添える */
+/* 電球つきの丸い吹き出し。オススメの手にだけ添える。
+   この画面で色を持つのはここだけ */
 .tip-badge {
   position: absolute;
   top: -11px;
@@ -1590,12 +2054,12 @@ body {
   align-items: center;
   gap: 2px;
   padding: 2px 6px;
-  border: 2px solid #cbb582;
-  border-radius: 999px;
-  background: #f7e7bd;
-  color: var(--ink);
+  border: 2px solid var(--md-sys-color-primary);
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
   line-height: 1;
-  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.12);
+  box-shadow: var(--md-sys-elevation-level1);
   pointer-events: none;
 }
 
@@ -1607,9 +2071,9 @@ body {
   bottom: -6px;
   width: 8px;
   height: 8px;
-  background: #f7e7bd;
-  border-right: 2px solid #cbb582;
-  border-bottom: 2px solid #cbb582;
+  background: var(--md-sys-color-primary-container);
+  border-right: 2px solid var(--md-sys-color-primary);
+  border-bottom: 2px solid var(--md-sys-color-primary);
   transform: rotate(45deg);
   border-bottom-right-radius: 2px;
 }
@@ -1620,7 +2084,7 @@ body {
 
 .tip-text {
   font-size: 9px;
-  font-weight: 900;
+  font-weight: var(--md-sys-typescale-weight-emphasized);
   white-space: nowrap;
 }
 
@@ -1637,26 +2101,27 @@ body {
 .hand-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
 }
 
 .hand-label {
   flex: 0 0 auto;
   min-width: 4.5em;
-  font-size: clamp(13px, 3.6vw, 17px);
-  font-weight: 900;
-  color: #fff;
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+  font-size: var(--md-sys-typescale-title-small-size);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .hand-choices {
   flex: 1;
   display: flex;
-  gap: 6px;
+  gap: var(--sp-1);
 }
 
+/* 3つの手＝トグルの選択肢。M3のトグルと同じく、選択は面の色で示す */
 .hand-btn {
   position: relative;
+  isolation: isolate;
   flex: 1;
   min-width: 0;
   min-height: 56px;
@@ -1665,14 +2130,39 @@ body {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  padding: 6px 2px;
-  border: 3px solid transparent;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.12);
+  padding: var(--sp-2) 2px;
+  border: none;
+  border-radius: var(--md-sys-shape-corner-large);
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
   font-family: inherit;
   cursor: pointer;
-  transition: background 0.12s, border-color 0.12s;
+  touch-action: manipulation;
+  /* オススメの吹き出しが上にはみ出すので、ここは切らない */
+  overflow: visible;
+  transition: background-color var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    color var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    border-radius var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-spring),
+    transform var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-spring);
+}
+
+.hand-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: currentColor;
+  opacity: 0;
+  transition: opacity var(--md-sys-motion-duration-short2) var(--md-sys-motion-easing-standard);
+}
+
+.hand-btn:active:not(:disabled) {
+  border-radius: var(--md-sys-shape-corner-small);
+}
+
+.hand-btn:active:not(:disabled)::after {
+  opacity: var(--md-sys-state-pressed-opacity);
 }
 
 .hand-btn:disabled {
@@ -1680,11 +2170,24 @@ body {
   opacity: 0.75;
 }
 
-/* 選ばれた手だけをはっきり光らせる */
+/* オススメの手。吹き出しが出るぶん、面もほんの少し色を持たせる */
+.hand-btn.rec {
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+/* 選ばれた手だけをはっきり光らせる（オススメより強い） */
 .hand-btn.on {
-  background: var(--yellow);
-  border-color: var(--orange-dark);
-  box-shadow: 0 4px 0 var(--orange-dark), 0 0 16px rgba(255, 216, 61, 0.9);
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  transform: scale(1.03);
+  box-shadow: var(--md-sys-elevation-level2);
+}
+
+.hand-btn .tip-badge {
+  top: -9px;
+  right: -4px;
 }
 
 .hand-emoji {
@@ -1693,23 +2196,12 @@ body {
 }
 
 .hand-name {
-  font-size: clamp(11px, 3vw, 14px);
-  font-weight: 900;
-  color: var(--ink);
+  font-size: var(--md-sys-typescale-label-large-size);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
+  color: inherit;
 }
 
-/* オススメの手。吹き出しが飛び出すので上に少し余白をとる */
-.hand-btn.rec {
-  border-color: #d9c79f;
-  background: #fdf6e6;
-}
-
-.hand-btn .tip-badge {
-  top: -9px;
-  right: -4px;
-}
-
-/* ---------- オンライン戦闘: ジャンケンのカットイン ---------- */
+/* ---------- 4.11 オンライン戦闘: ジャンケンのカットイン ---------- */
 
 .janken-cutin {
   position: absolute;
@@ -1719,20 +2211,20 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
   z-index: 26;
   pointer-events: none;
-  animation: pop-in 0.3s cubic-bezier(0.2, 1.4, 0.5, 1) both;
+  animation: pop-in var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-spring) both;
 }
 
 .janken-hands {
   display: flex;
   align-items: center;
   gap: clamp(10px, 4vw, 26px);
-  padding: 10px 22px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+  padding: var(--sp-3) var(--sp-5);
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-surface-container-lowest);
+  box-shadow: var(--md-sys-elevation-level3);
 }
 
 .janken-hand {
@@ -1741,26 +2233,26 @@ body {
 }
 
 .janken-vs {
-  font-size: clamp(15px, 4.5vw, 22px);
-  font-weight: 900;
-  color: var(--orange-dark);
+  font-size: var(--md-sys-typescale-title-large-size);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
+  color: var(--md-sys-color-primary);
 }
 
 .janken-result {
-  padding: 6px 18px;
-  border-radius: 999px;
-  background: var(--yellow);
-  font-size: clamp(14px, 4vw, 19px);
-  font-weight: 900;
-  color: var(--ink);
+  padding: var(--sp-1) var(--sp-4);
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  font-size: var(--md-sys-typescale-title-medium-size);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
   white-space: nowrap;
 }
 
-/* ---------- オンラインリザルト: ％の並べ表示 ---------- */
+/* ---------- 4.12 オンラインリザルト: ％の並べ表示 ---------- */
 
 .percent-row {
   display: flex;
-  gap: 10px;
+  gap: var(--sp-3);
   justify-content: center;
 }
 
@@ -1771,44 +2263,21 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 8px 10px;
-  border-radius: var(--radius);
-  background: rgba(255, 255, 255, 0.9);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  background: var(--md-sys-color-surface-container-low);
 }
 
 .percent-label {
-  font-size: clamp(11px, 3vw, 14px);
-  font-weight: 800;
-  color: var(--ink-soft);
+  font-size: var(--md-sys-typescale-label-medium-size);
+  font-weight: var(--md-sys-typescale-weight-bold);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .percent-value {
-  font-size: clamp(24px, 7vw, 38px);
-  font-weight: 900;
-  color: var(--green-dark);
+  font-size: var(--md-sys-typescale-display-medium-size);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
+  color: var(--md-sys-color-secondary);
   font-variant-numeric: tabular-nums;
-}
-
-/* ---------- 実機デバッグ用の通信ログ ---------- */
-
-.netlog {
-  display: none;
-  margin: 0;
-  max-height: 34vh;
-  overflow: auto;
-  padding: 8px 10px;
-  border-radius: 10px;
-  background: rgba(20, 24, 20, 0.88);
-  color: #d8f5c8;
-  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 11px;
-  line-height: 1.45;
-  white-space: pre-wrap;
-  word-break: break-word;
-  user-select: all;
-  -webkit-user-select: all;
-}
-
-.netlog.on {
-  display: block;
+  line-height: 1.1;
 }

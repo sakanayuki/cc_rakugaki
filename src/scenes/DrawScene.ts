@@ -1,6 +1,7 @@
 /**
  * オエカキ画面。
- * からだ → あたま → うで → あし の4ステップで、1パーツずつ描き足していく。
+ * あたま → からだ → うで → あし の4ステップで、1パーツずつ描き足していく。
+ * 順番は STEP_ORDER（paint/types.ts）だけで決まる。ここには焼き込まない。
  * ツールは ペン色 / 太さ / ぬりつぶし / ひとつもどす / このパーツをやりなおし の5つ。
  */
 
@@ -20,7 +21,7 @@ import {
   createEmptyDoc,
 } from '../paint/types';
 import { button, confirmDialog, h } from '../ui/components';
-import { S } from '../ui/strings';
+import { S, stepTitleOf } from '../ui/strings';
 
 /** ステップごとに表示する、うすい下書きガイド */
 interface GuideShape {
@@ -148,8 +149,9 @@ export function createDrawScene(ctx: SceneContext, params: SceneParamMap['draw']
 
   /** 保存された進行位置から、開くステップを決める */
   function resolveStep(): PartId {
-    if (!resume) return 'body';
-    if (doc.currentStep === 'done') return 'legs';
+    if (!resume) return STEP_ORDER[0];
+    // 描き終わっている絵は、最後のパーツを直せる状態で開く
+    if (doc.currentStep === 'done') return STEP_ORDER[STEP_ORDER.length - 1];
     return doc.currentStep;
   }
 
@@ -351,7 +353,7 @@ export function createDrawScene(ctx: SceneContext, params: SceneParamMap['draw']
 
   /** ステップ・ツール・ボタンの有効状態をまとめて更新する */
   function refresh(): void {
-    titleNode.textContent = S.stepTitle[step];
+    titleNode.textContent = stepTitleOf(step);
     if (!toastTimer) hintNode.textContent = S.stepHint[step];
 
     const index = currentIndex();

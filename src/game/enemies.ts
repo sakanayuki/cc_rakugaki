@@ -9,7 +9,7 @@
  */
 
 import type { CharacterDoc, DrawOp, PartId } from '../paint/types';
-import { CANVAS_SIZE } from '../paint/types';
+import { CANVAS_SIZE, STEP_ORDER } from '../paint/types';
 import type { Element } from './element';
 import type { Stats } from './stats';
 
@@ -145,11 +145,22 @@ class DocBuilder {
     return this.fill(part, cx, cy, fillColor);
   }
 
+  /**
+   * 組み立てたオペを**オエカキのステップ順に並べ直して**返す。
+   *
+   * 塗りつぶしは「そのときの合成画像」を境界にし、前工程のパーツは
+   * かべとして扱われる（PaintEngine.blockedMask）。つまり順番で絵が変わる。
+   * 敵の定義はパーツごとにまとめて書けるようにしておき、並べ替えはここで
+   * 引き受ける。こうしておけば STEP_ORDER を変えても敵の見た目は崩れない。
+   */
   build(): CharacterDoc {
+    const ordered = [...this.ops]
+      .sort((a, b) => STEP_ORDER.indexOf(a.part) - STEP_ORDER.indexOf(b.part))
+      .map((op, index) => ({ ...op, seq: index }));
     return {
       version: 1,
       canvasSize: CANVAS_SIZE,
-      ops: this.ops,
+      ops: ordered,
       currentStep: 'done',
       updatedAt: '2026-01-01T00:00:00.000Z',
     };

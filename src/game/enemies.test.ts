@@ -12,6 +12,7 @@ import {
 } from './enemies';
 import { ELEMENTS } from './element';
 import type { Stats } from './stats';
+import { STEP_ORDER } from '../paint/types';
 
 const PLAYER: Stats = { maxHp: 110, atk: 30, spd: 15, element: 'rock' };
 
@@ -49,6 +50,16 @@ describe('敵の一覧', () => {
       const parts = new Set(enemy.doc.ops.map((op) => op.part));
       expect([...parts].sort()).toEqual(['arms', 'body', 'head', 'legs']);
       expect(enemy.doc.currentStep).toBe('done');
+    }
+  });
+
+  it('描画オペがステップ順に並んでいる', () => {
+    // 塗りつぶしは「そのときの合成画像」を境界にするので、並び順で絵が変わる。
+    // 定義の書き順にかかわらず、必ず STEP_ORDER の順で持つこと（§11-36）
+    for (const enemy of ENEMIES) {
+      const order = enemy.doc.ops.map((op) => STEP_ORDER.indexOf(op.part));
+      expect(order).toEqual([...order].sort((a, b) => a - b));
+      expect(enemy.doc.ops.map((op) => op.seq)).toEqual(enemy.doc.ops.map((_, i) => i));
     }
   });
 

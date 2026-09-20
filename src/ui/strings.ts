@@ -6,6 +6,7 @@
 import type { Element } from '../game/element';
 import { strongAgainst } from '../game/element';
 import type { PartId } from '../paint/types';
+import { STEP_ORDER } from '../paint/types';
 
 export const S = {
   appTitle: 'らくがきバトル',
@@ -25,11 +26,12 @@ export const S = {
   next: 'つぎへ →',
 
   // --- オエカキ ---
+  /** 見出しの番号は付けない。順番は STEP_ORDER から決める（stepTitleOf） */
   stepTitle: {
-    body: '① からだを かこう！',
-    head: '② あたまを かこう！',
-    arms: '③ りょううでを かこう！',
-    legs: '④ りょうあしを かこう！',
+    body: 'からだを かこう！',
+    head: 'あたまを かこう！',
+    arms: 'りょううでを かこう！',
+    legs: 'りょうあしを かこう！',
   } as Record<PartId, string>,
   stepHint: {
     body: 'おおきく ぬると たいりょくが つよくなるよ',
@@ -196,6 +198,16 @@ export function weakHandNote(defender: Element): string {
 export function strongHandNote(defender: Element): string {
   const hand = ELEMENT_INFO[strongAgainst(defender)];
   return `${hand.name} で こうげきすると こうかばつぐん！`;
+}
+
+/**
+ * オエカキの見出し。「① あたまを かこう！」の形にする。
+ * 番号は STEP_ORDER の位置から作るので、工程の順番を入れ替えてもずれない。
+ */
+export function stepTitleOf(part: PartId): string {
+  const marks = ['①', '②', '③', '④'];
+  const mark = marks[STEP_ORDER.indexOf(part)];
+  return mark ? `${mark} ${S.stepTitle[part]}` : S.stepTitle[part];
 }
 
 /** 「○れんしょうちゅう！」 */

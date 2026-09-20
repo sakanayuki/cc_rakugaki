@@ -2,8 +2,13 @@
 
 export type PartId = 'body' | 'head' | 'arms' | 'legs';
 
-/** オエカキのステップ順 */
-export const STEP_ORDER: readonly PartId[] = ['body', 'head', 'arms', 'legs'];
+/**
+ * オエカキのステップ順。
+ *
+ * この並びが「前の工程＝かべ」の判定（PaintEngine.blockedMask）と
+ * 見出しの番号を決めるので、順番を変えたいときはここだけ直せばよい。
+ */
+export const STEP_ORDER: readonly PartId[] = ['head', 'body', 'arms', 'legs'];
 
 /** 表示合成の順（あとのものが手前）。あたま・うでが からだ の手前に来る */
 export const COMPOSITE_ORDER: readonly PartId[] = ['body', 'legs', 'arms', 'head'];
@@ -57,7 +62,7 @@ export function createEmptyDoc(): CharacterDoc {
     version: 1,
     canvasSize: CANVAS_SIZE,
     ops: [],
-    currentStep: 'body',
+    currentStep: STEP_ORDER[0],
     updatedAt: new Date().toISOString(),
   };
 }

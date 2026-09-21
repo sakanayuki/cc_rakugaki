@@ -146,7 +146,8 @@ export function createPreviewScene(ctx: SceneContext): Scene {
           ]),
           h('div', { class: 'draw-footer' }, [
             button(S.toDraw, { variant: 'ghost', onClick: () => ctx.go('draw', { resume: true }) }),
-            button(S.toBattle, { variant: 'primary', onClick: () => ctx.go('roulette') }),
+            // 敵の絵づくりに数秒かかるので、よみこみ画面を挟む（押せたことが分かるように）
+            button(S.toBattle, { variant: 'primary', onClick: () => ctx.go('loading') }),
           ]),
           // オンライン対戦への唯一の入口。1人用と混ざらないよう段を分ける
           h('div', { class: 'row row-center' }, [

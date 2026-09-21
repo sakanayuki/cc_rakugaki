@@ -9,6 +9,7 @@ export type SceneName =
   | 'menu'
   | 'draw'
   | 'preview'
+  | 'loading'
   | 'roulette'
   | 'battle'
   | 'result'
@@ -23,6 +24,8 @@ export interface SceneParamMap {
   /** resume: true なら保存された絵の続きから */
   draw: { resume: boolean } | void;
   preview: void;
+  /** 対戦へ進む前のよみこみ。敵の絵を作ってからルーレットへ渡す */
+  loading: void;
   roulette: void;
   battle: { enemyId: string };
   result: { outcome: 'win' | 'lose'; enemyId: string; winKind: WinKind };

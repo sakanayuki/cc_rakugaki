@@ -36,3 +36,13 @@ export function getEnemyAssets(id: string): EnemyAssets {
   cache.set(id, assets);
   return assets;
 }
+
+/**
+ * もう作ってあるか（＝呼んでもすぐ返るか）。
+ *
+ * 1体あたり 1024x1024 のレイヤーを起こして解析するので、9体まとめて作ると
+ * 数秒かかる。よみこみ画面はこれを見て、まだのものだけ1コマ休んでから作る。
+ */
+export function isEnemyAssetReady(id: string): boolean {
+  return cache.has(id);
+}

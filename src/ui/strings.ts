@@ -39,6 +39,10 @@ export const S = {
     arms: 'ふとい うでは こうげきが つよいよ',
     legs: 'おおきな あしは はやく うごけるよ',
   } as Record<PartId, string>,
+  // --- よみこみ画面 ---
+  loadingTitle: 'よみこみちゅう',
+  loadingNote: 'あいてを よんでるよ…',
+
   toolPen: 'ペン',
   toolFill: 'ぬる',
   toolUndo: 'もどす',

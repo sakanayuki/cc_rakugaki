@@ -1267,6 +1267,153 @@ body {
   }
 }
 
+/* ---------- 4.5 よみこみ画面 ----------
+
+   敵の絵づくりに数秒かかる間の画面。バーの伸びは本当の進み具合で、
+   自分が描いたキャラのあたまがバーの先を走る。                        */
+
+.loading-title {
+  margin: 0 0 var(--sp-5);
+  font-size: var(--md-sys-typescale-headline-medium-size);
+  font-weight: var(--md-sys-typescale-weight-emphasized);
+  color: var(--md-sys-color-primary);
+  text-align: center;
+  animation: loading-breathe 1.6s var(--md-sys-motion-easing-standard) infinite;
+}
+
+@keyframes loading-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* M3のリニアインジケータ。まるい帯に、走り手ぶんの余白を上に取る */
+.loading-track {
+  position: relative;
+  width: min(420px, 78vw);
+  height: 18px;
+  margin-top: 34px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-surface-container-highest);
+}
+
+/* 幅はJSから1体ぶんずつ入れる。
+   **アニメーションさせない**: 敵の絵づくりでメインスレッドが1秒ほど止まるため、
+   幅のトランジションは進まないまま描かれてしまう。段ごとにパッと伸ばす。 */
+.loading-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  overflow: hidden;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-primary);
+}
+
+/* 伸びている最中だと分かるよう、うっすら光が流れる。
+   transform で動かすので、メインスレッドが詰まっていても止まらない */
+.loading-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 60%;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    color-mix(in srgb, var(--md-sys-color-on-primary) 45%, transparent) 50%,
+    transparent 100%
+  );
+  animation: loading-shine 1.4s linear infinite;
+}
+
+@keyframes loading-shine {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(320%);
+  }
+}
+
+/* バーの先っぽを走るキャラ。ぴょんぴょん跳ねる */
+/* バーの先っぽを走るキャラ。
+   跳ねる動きは transform（合成スレッド側）なので、
+   敵の絵を作っている最中も止まらない ＝ 画面が固まって見えない */
+.loading-runner {
+  position: absolute;
+  left: 0;
+  bottom: 100%;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  font-size: 30px;
+  line-height: 1;
+  pointer-events: none;
+  animation: loading-hop 0.62s var(--md-sys-motion-easing-standard) infinite;
+}
+
+@keyframes loading-hop {
+  0%,
+  100% {
+    transform: translate(-50%, 0);
+  }
+  50% {
+    transform: translate(-50%, -10px);
+  }
+}
+
+.loading-runner-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.loading-note {
+  margin: var(--sp-5) 0 var(--sp-4);
+  font-size: var(--md-sys-typescale-title-medium-size);
+  font-weight: var(--md-sys-typescale-weight-bold);
+  color: var(--md-sys-color-on-surface-variant);
+  text-align: center;
+}
+
+/* 用意できた相手が1体ずつ増えていく。字が読めなくても進み具合が分かる */
+.loading-faces {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--sp-2);
+  width: min(420px, 78vw);
+}
+
+.loading-face {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-surface-container-low);
+  animation: pop-in var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-spring) both;
+}
+
+.loading-face img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
 /* ---------- 4.5 ルーレット画面 ---------- */
 
 .streak-banner {

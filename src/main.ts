@@ -1,4 +1,4 @@
-/** エントリポイント。11画面を登録してメインメニューから始める。 */
+/** エントリポイント。12画面を登録してメインメニューから始める。 */
 
 import './style.css';
 import { audio } from './app/audio';
@@ -6,6 +6,7 @@ import { SceneManager } from './app/SceneManager';
 import { createBattleScene } from './scenes/BattleScene';
 import { createDrawScene } from './scenes/DrawScene';
 import { createHallOfFameScene } from './scenes/HallOfFameScene';
+import { createLoadingScene } from './scenes/LoadingScene';
 import { createMatchScene } from './scenes/MatchScene';
 import { createMenuScene } from './scenes/MenuScene';
 import { createOnlineBattleScene } from './scenes/OnlineBattleScene';
@@ -25,6 +26,7 @@ const manager = new SceneManager(sceneRoot);
 manager.register('menu', createMenuScene);
 manager.register('draw', createDrawScene);
 manager.register('preview', createPreviewScene);
+manager.register('loading', createLoadingScene);
 manager.register('roulette', createRouletteScene);
 manager.register('battle', createBattleScene);
 manager.register('result', createResultScene);

@@ -46,6 +46,17 @@ const GUIDES: Record<PartId, GuideShape[]> = {
 
 type Tool = 'pen' | 'fill';
 
+/**
+ * 道具と太さの初期値。
+ *
+ * ステップが変わるたびにここへ戻す。前のパーツで「ぬる」や「ふとい」に
+ * したままだと、次のパーツでいきなり塗りつぶしてしまうことがあるため、
+ * どのパーツも「ペンのふつう」から始められるようにする。
+ * 色は選んだものを引き継ぐ（同じ色で描き続けたい場面が多いので）。
+ */
+const DEFAULT_TOOL: Tool = 'pen';
+const DEFAULT_WIDTH = PEN_WIDTHS[1];
+
 /** いま描いていないパーツの表示濃度。半透明にして現在の線を見分けやすくする */
 const OTHER_PART_ALPHA = 0.5;
 
@@ -70,9 +81,9 @@ export function createDrawScene(ctx: SceneContext, params: SceneParamMap['draw']
   gameState.analysis = null;
 
   let step: PartId = resolveStep();
-  let tool: Tool = 'pen';
+  let tool: Tool = DEFAULT_TOOL;
   let color = PALETTE[0].color;
-  let width = PEN_WIDTHS[1];
+  let width = DEFAULT_WIDTH;
 
   let drawing = false;
   let dirty = true;
@@ -322,6 +333,7 @@ export function createDrawScene(ctx: SceneContext, params: SceneParamMap['draw']
     }
     step = STEP_ORDER[index + 1];
     doc.currentStep = step;
+    resetTools();
     saveDoc(doc);
     refresh();
   }
@@ -334,8 +346,15 @@ export function createDrawScene(ctx: SceneContext, params: SceneParamMap['draw']
     }
     step = STEP_ORDER[index - 1];
     doc.currentStep = step;
+    resetTools();
     saveDoc(doc);
     refresh();
+  }
+
+  /** パーツが変わったら道具と太さを既定に戻す（色はそのまま） */
+  function resetTools(): void {
+    tool = DEFAULT_TOOL;
+    width = DEFAULT_WIDTH;
   }
 
   // ---------------------------------------------------------------- 表示更新
